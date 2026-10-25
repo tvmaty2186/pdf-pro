@@ -1,0 +1,5 @@
+node_modules/
+dist/
+clave-errores.json
+build/node-win/
+build/ocr-modelos/

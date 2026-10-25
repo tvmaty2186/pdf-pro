@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'">
+  <title>pdf.pro</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="carga.css">
+</head>
+<body>
+  <div class="resplandor"></div>
+  <svg class="ondas" viewBox="0 0 720 120" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="onda" x1="0" x2="1"><stop offset="0" stop-color="#E11D3F" stop-opacity=".2"/><stop offset=".6" stop-color="#FF3D6E" stop-opacity=".8"/><stop offset="1" stop-color="#E52BFF"/></linearGradient></defs>
+    <path d="M0 70 C200 40 420 64 720 8" fill="none" stroke="url(#onda)" stroke-width="1.6"/>
+    <path d="M0 96 C240 76 470 90 720 46" fill="none" stroke="url(#onda)" stroke-width="1" opacity=".55"/>
+  </svg>
+
+  <main>
+    <div class="logo"><img src="marca/simbolo.svg" alt=""><span class="nombre">pdf<b>.pro</b></span></div>
+    <p class="lema">Tu universo documental, más simple.</p>
+    <p id="estado">Iniciando…</p>
+    <div class="barra"><div id="relleno"></div></div>
+  </main>
+
+  <svg class="documento" viewBox="0 0 300 300" aria-hidden="true">
+    <defs>
+      <linearGradient id="anillo" x1="0" x2="1"><stop offset="0" stop-color="#FF5A7E"/><stop offset=".55" stop-color="#E11D3F"/><stop offset="1" stop-color="#E52BFF"/></linearGradient>
+      <linearGradient id="hoja" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF6F6"/><stop offset="1" stop-color="#F6DCE1"/></linearGradient>
+      <filter id="brillo" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
+    </defs>
+    <g class="anillo">
+      <!-- mitad de atrás del anillo -->
+      <path d="M36 196 C30 160 120 128 196 124 C262 120 284 140 270 158" fill="none" stroke="url(#anillo)" stroke-width="16" stroke-linecap="round" opacity=".75"/>
+    </g>
+    <g class="hoja">
+      <g transform="rotate(-8 150 140)">
+        <path d="M100 52 H180 L214 86 V214 A12 12 0 0 1 202 226 H100 A12 12 0 0 1 88 214 V64 A12 12 0 0 1 100 52 Z" fill="url(#hoja)"/>
+        <path d="M180 52 V76 A10 10 0 0 0 190 86 H214 Z" fill="#FFC2CC"/>
+        <rect x="108" y="102" width="70" height="8" rx="4" fill="#F4A9B8"/>
+        <rect x="108" y="122" width="86" height="8" rx="4" fill="#F4A9B8"/>
+        <rect x="108" y="142" width="62" height="8" rx="4" fill="#F4A9B8"/>
+      </g>
+    </g>
+    <g class="anillo">
+      <!-- mitad de adelante -->
+      <path d="M270 158 C252 192 170 222 104 226 C60 228 38 214 36 196" fill="none" stroke="url(#anillo)" stroke-width="18" stroke-linecap="round" filter="url(#brillo)" opacity=".7"/>
+      <path d="M270 158 C252 192 170 222 104 226 C60 228 38 214 36 196" fill="none" stroke="url(#anillo)" stroke-width="16" stroke-linecap="round"/>
+    </g>
+  </svg>
+
+  <p class="autor">Hecho por Matías Russo, para amigos y familia</p>
+  <small id="version"></small>
+  <script src="carga.js"></script>
+</body>
+</html>

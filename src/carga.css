@@ -1,0 +1,30 @@
+/* pdf.pro — pantalla de carga (oscura, con la cinta de luz y la barra de avance real) */
+html, body { margin: 0; height: 100%; }
+body {
+  position: relative; overflow: hidden; user-select: none; -webkit-app-region: drag;
+  font-family: var(--fuente); color: #FFF1F3;
+  background: radial-gradient(70% 90% at 78% 28%, #6A0B22 0%, #3A0A16 45%, #1E0A10 80%);
+}
+.resplandor { position: absolute; width: 360px; height: 360px; right: 40px; top: 10px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(225, 29, 63, .45), transparent 65%); filter: blur(10px); animation: latir 5s ease-in-out infinite; }
+.ondas { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 120px; }
+main { position: absolute; left: 56px; top: 118px; width: 330px; }
+.logo { display: flex; align-items: center; gap: 16px; }
+.logo img { width: 64px; height: 64px; filter: drop-shadow(0 6px 18px rgba(225, 29, 63, .55)); }
+.nombre { font: 800 52px/1 var(--fuente-titulo); letter-spacing: -0.04em; color: #FFF6F6; }
+.nombre b { font-weight: inherit; background: linear-gradient(90deg, #E11D3F, #FF3D6E 55%, #E52BFF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lema { margin: 14px 0 0; font-size: 15px; color: #E6B8C2; }
+#estado { margin: 34px 0 8px; font-size: 12.5px; color: #F3D3DA; }
+.barra { width: 260px; height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+#relleno { width: 5%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #E11D3F, #FF3D6E 60%, #E52BFF); transition: width 220ms ease; }
+.documento { position: absolute; right: 30px; top: 46px; width: 300px; height: 300px; overflow: visible; }
+.hoja { animation: flotar 6s ease-in-out infinite; transform-origin: 150px 140px; }
+.anillo { animation: brillar 6s ease-in-out infinite; }
+#version { position: absolute; right: 22px; bottom: 14px; font-size: 11px; color: rgba(255, 220, 228, .55); }
+@keyframes flotar { 50% { transform: translateY(-6px) rotate(1deg); } }
+@keyframes brillar { 50% { opacity: .82; } }
+@keyframes latir { 50% { opacity: .7; transform: scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .hoja, .anillo, .resplandor { animation: none; } }
+
+.autor { position: absolute; left: 56px; bottom: 14px; margin: 0; font-size: 12px; letter-spacing: .01em; color: rgba(255, 220, 228, .72); }
+.autor::before { content: ""; display: inline-block; width: 18px; height: 1px; margin-right: 8px; vertical-align: middle; background: linear-gradient(90deg, #FF3D6E, #E52BFF); }

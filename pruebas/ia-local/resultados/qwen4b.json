@@ -1,0 +1,116 @@
+{
+ "modelo": "Qwen3.5-4B-Q4_K_M.gguf",
+ "archivoGB": 2.74,
+ "cargaS": 9.2,
+ "memoriaGB": 6.34,
+ "datosClave": 90,
+ "respuestasBien": 10,
+ "castellano": 10,
+ "palabrasPorSegundo": 3.9,
+ "esperaCortoS": 4.8,
+ "esperaLargoS": 35.5,
+ "palabrasLargo": 1603,
+ "resumenLargo": "- Se aprobó la impermeabilización de la terraza por 4.200.000 pesos en cuatro cuotas.\n- Las expensas aumentan un 12% desde abril por el costo de la luz y el sueldo del encargado.\n- Se debe pedir informe técnico del ascensor antes del 30 de abril o cambiar de empresa.\n- El alquiler de la vivienda en Rosario es de 650.000 pesos y se actualiza cada seis meses.\n- Para reintegrar la obra social, se necesita factura, receta médica y planilla de asistencia.",
+ "filas": [
+  {
+   "id": "acta",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 4.322400203407069,
+   "espera": 5.433,
+   "resumen": "- Se aprobó impermeabilizar la terraza por **4.200.000 pesos**, pagando en cuatro cuotas desde **abril**.\n- Las expensas suben un **12 %** a partir de **abril** por el aumento de luz y sueldos.\n- El mantenimiento del ascensor debe entregar un informe técnico antes del **30 de abril**.\n- Está prohibido dejar bicicletas en los pasillos y la basura se saca entre las **20 y las 22 horas**.",
+   "respuesta": "Las expensas suben un 12 % desde el mes de abril."
+  },
+  {
+   "id": "alquiler",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 3.4643128321943815,
+   "espera": 5.126,
+   "resumen": "*   **Plazo:** 3 años, del 1 de mayo de 2026 al 30 de abril de 2029.\n*   **Alquiler:** 650.000 pesos mensuales (pago del 1 al 10), con actualización cada 6 meses.\n*   **Depósito:** Un mes de alquiler, devuelto al finalizar si el departamento está en buen estado.\n*   **Gastos:** El inquilino paga luz, gas, internet y expensas ordinarias.\n*   **Rescisión:** El inquilino puede cancelar tras 6 meses, avisando con 1 mes de antelación.",
+   "respuesta": "Las expensas extraordinarias las paga la parte locadora."
+  },
+  {
+   "id": "reintegros",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 4.286301450296518,
+   "espera": 4.915,
+   "resumen": "- **Plazo para presentar:** 60 días hábiles desde la fecha de la factura.\n- **Tiempo de revisión:** 30 días hábiles para aprobar o rechazar el reintegro.\n- **Documentos necesarios:** Factura original (tipo B o C), receta médica previa y planilla de asistencia (si aplica).\n- **Monto devuelto:** Solo si la prestación no estaba cubierta en la cartilla.\n- **Ubicación:** Se puede hacer por la web de la obra social o en cualquier sucursal.",
+   "respuesta": "El plazo es de 60 días desde la fecha de la factura."
+  },
+  {
+   "id": "factura",
+   "cubre": 0.4,
+   "correcta": true,
+   "castellano": true,
+   "pps": 2.4171761694867056,
+   "espera": 4.963,
+   "resumen": "- **Fecha de emisión:** 05/10/2026.\n- **Total a pagar:** 196.000 pesos.\n- **Plazo de pago:** 15 días desde el recibimiento de la factura.\n- **Vencimiento del CAE:** 15/10/2026.\n- **Prestador:** Transportes Ruta Sur (monotributista).",
+   "respuesta": "El total a pagar es de 196.000 pesos."
+  },
+  {
+   "id": "reglamento",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 3.8620689655172415,
+   "espera": 4.794,
+   "resumen": "Aquí tenés el resumen:\n\n*   **Cuota social:** 3.000 pesos por mes para socios mayores de 12 años.\n*   **Préstamos:** Máximo 3 libros por 14 días, renovables una vez si no hay peticiones.\n*   **Plazos y multas:** Demoras de 2 días por cada día de atraso; si pierden o dañan un libro, deben reponerlo o pagar.\n*   **Horarios:** Lunes a viernes de 9 a 19 y sábados de 10 a 13.\n*   **Donaciones:** Reciben libros en buen estado de lunes a viernes por la mañana.",
+   "respuesta": "Un socio puede llevarse hasta tres libros por vez."
+  },
+  {
+   "id": "informe",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 4.476953149631124,
+   "espera": 4.759,
+   "resumen": "- El caudal promedio medido fue de 3,6 litros por hora (diseño: 4 litros/hora).\n- La uniformidad del riego alcanzó el 82 %, por debajo del 90 % recomendado.\n- La presión en la cabecera es de 1,2 bar, cuando se necesitan 1,5 bar.\n- Se debe limpiar el filtro cada 15 días durante la temporada de riego.\n- Se espera ahorrar un 10 % de agua al aplicar las recomendaciones.",
+   "respuesta": "La uniformidad de riego medida fue del 82 %."
+  },
+  {
+   "id": "escuela",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 4.101498414087279,
+   "espera": 4.507,
+   "resumen": "- Salida educativa al Museo de Ciencias Naturales el **viernes 14 de noviembre** (8:30 a 13 horas).\n- Autorización firmada por un adulto responsable que debe llegar antes del **miércoles 12 de noviembre**.\n- Costo del micro: **4.500 pesos** por alumno (pagable en secretaría o con ayuda de la cooperadora).\n- Llevan vianda, agua y gorra; **no celulares**.\n- Acto de fin de año el **5 de diciembre** a las 10 horas en el patio.",
+   "respuesta": "Hasta el miércoles 12 de noviembre."
+  },
+  {
+   "id": "privacidad",
+   "cubre": 0.6,
+   "correcta": true,
+   "castellano": true,
+   "pps": 3.9622066443157573,
+   "espera": 4.594,
+   "resumen": "- **Datos recolectados:** Nombre, correo, teléfono y turnos; no se pide tarjeta de crédito.\n- **Tiempo de retención:** Mientras la cuenta esté activa o hasta 2 años después de cerrarla.\n- **Plazos de respuesta:** 10 días hábiles para solicitar ver, corregir o borrar datos.\n- **Seguridad:** Datos cifrados y almacenados en servidores en Argentina.\n- **Notificación de cambios:** 30 días de anticipación por correo electrónico.",
+   "respuesta": "Guardan los datos hasta dos años después de cerrar la cuenta."
+  },
+  {
+   "id": "receta",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 3.287724217956776,
+   "espera": 4.982,
+   "resumen": "- **24 horas:** Morder gasa 30 min; no enjuagarse ni escupir.\n- **Comida:** Primer día, alimentos blandos y fríos/tibios (yogur, puré).\n- **Dolor:** Ibuprofeno 400 mg cada 8 horas, máx 3 días.\n- **Frío:** Hielo en paño 15 min sí/15 min no, durante primeras 6 horas.\n- **Higiene:** Bucar con agua tibia y sal desde el segundo día.\n- **Prohibido:** Fumar y alcohol por al menos 72 horas.",
+   "respuesta": "Se puede tomar cada 8 horas."
+  },
+  {
+   "id": "noticia",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 4.713842058562555,
+   "espera": 4.156,
+   "resumen": "- Se inauguraron 18 km de ciclovías en Villa Serrana con un costo de 950 millones de pesos.\n- La red total de la ciudad ahora tiene 42 km y se instalaron 30 estaciones de bicicletas públicas.\n- Los comerciantes de Rivadavia se quejaron por la ocupación de un carril, pero el municipio promete un nuevo estacionamiento antes de fin de año.\n- La meta es que el 10% de los viajes diarios se hagan en bicicleta para 2028, actualizando la cifra actual del 3%.",
+   "respuesta": "La ciudad tiene ahora 42 kilómetros de ciclovías en total."
+  }
+ ]
+}

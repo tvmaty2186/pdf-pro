@@ -1,0 +1,116 @@
+{
+ "modelo": "Qwen3.5-2B-Q4_K_M.gguf",
+ "archivoGB": 1.28,
+ "cargaS": 6.8,
+ "memoriaGB": 3.22,
+ "datosClave": 94,
+ "respuestasBien": 10,
+ "castellano": 10,
+ "palabrasPorSegundo": 7.4,
+ "esperaCortoS": 2.1,
+ "esperaLargoS": 15.2,
+ "palabrasLargo": 1603,
+ "resumenLargo": "Aquí está el resumen del documento en 5 viñetas cortas:\n\n1.  **ACTA N° 47:** Se aprobó el presupuesto de 4.200.000 pesos para impermeabilizar la terraza, pagadero en cuatro cuotas mensuales desde abril.\n2.  **ACTA N° 47:** El aumento de expensas será del 12% desde abril debido al incremento en la luz y el sueldo del encargado.\n3.  **ACTA N° 47:** Se requiere informe técnico del ascensor antes del 30 de abril tras cinco fallas en el último trimestre; si no mejora, se cambiará de empresa.\n4.  **ACTA N° 47:** Se recuerda prohibir dejar bicicletas en pasillos y que la basura se recoja entre las 20 y las 22 horas.\n5.  **CONTRATO DE LOCACIÓN:** El alquiler de Rosario dura tres años (mayo 2026 a abril 2029), con depósito de un mes y gastos de luz/gas en la parte locataria.\n\n*Nota: El documento contiene información de una obra social, factura de transporte, reglamento de biblioteca, informe técnico de riego, comunicado escolar y política de privacidad de una app, además de noticias sobre ciclovías.*",
+ "filas": [
+  {
+   "id": "acta",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 8.189353840007989,
+   "espera": 2.469,
+   "resumen": "- **Arreglo de la terraza:** Presupuesto de 4.200.000 pesos aprobado por mayoría, pagable en 4 cuotas mensuales a partir de abril.\n- **Aumento de expensas:** Suben un 12% desde abril debido al aumento de la luz y del sueldo del encargado.\n- **Ascensor:** Se solicita informe técnico antes del 30 de abril; si no mejora, se cambiará de empresa.\n- **Varios:** Se recuerda prohibir dejar bicicletas en los pasillos y que la basura se saca entre las 20 y las 22 horas.",
+   "respuesta": "Las expensas suben un 12% desde el mes de abril."
+  },
+  {
+   "id": "alquiler",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 7.744660877728233,
+   "espera": 2.412,
+   "resumen": "- **Plazo:** 3 años (1 de mayo 2026 al 30 de abril 2029).\n- **Precio inicial:** 650.000 pesos mensuales (1–10 de cada mes).\n- **Actualización:** Se ajusta cada 6 meses según índice acordado.\n- **Depósito:** Un mes de alquiler (se devuelve al finalizar el contrato).\n- **Destino:** Uso exclusivo para vivienda familiar; no se permite subalquilar ni actividades comerciales.\n- **Gastos:** Expensas ordinarias y servicios de luz, gas e internet a cargo del locataria; las extraordinarias las paga el locador.\n- **Rescisión:** El locataria puede terminar el contrato después de 6 meses con aviso de un mes de anticipación.",
+   "respuesta": "La parte locadora paga las expensas extraordinarias."
+  },
+  {
+   "id": "reintegros",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 8.588631131574287,
+   "espera": 2.019,
+   "resumen": "- **Concepto:** Devolución de dinero cuando el afiliado paga una prestación cubierta que no estaba en su cartilla.\n- **Documentos necesarios:** Factura original (tipo B o C), orden o receta médica con fecha anterior a la factura, y para tratamientos mensuales, planilla de asistencia firmada.\n- **Dónde presentar:** Por la web de la obra social (sección \"Mis trámites\") o en cualquier sucursal.\n- **Plazo de presentación:** 60 días hábiles desde la fecha de la factura.\n- **Tiempo de respuesta:** 30 días hábiles hábiles para revisión; si se aprueba, el dinero se deposita en la cuenta bancaria informada.",
+   "respuesta": "El pedido de reintegro debe presentarse dentro de los 60 días de la fecha de la factura."
+  },
+  {
+   "id": "factura",
+   "cubre": 0.8,
+   "correcta": true,
+   "castellano": true,
+   "pps": 5.40641312453393,
+   "espera": 2.024,
+   "resumen": "- **Fecha de emisión:** 05/10/2026\n- **Prestador:** Transportes Ruta Sur (monotributista, domicilio en Avenida Belgrano 800, Quilmes)\n- **Condición frente al IVA:** Responsable monotributo\n- **Detalle de servicios:**\n  - Traslado ida y vuelta: 16 viajes de 12 km a 9.500 pesos cada uno (Subtotal: 152.000 pesos)\n  - Traslado a consultas médicas: 4 viajes a 11.000 pesos cada uno (Subtotal: 44.000 pesos)\n- **Total a pagar:** 196.000 pesos\n- **Forma de pago:** Transferencia bancaria dentro de los 15 días de recibida la factura\n- **CAE:** 74512369854123 (vencimiento: 15/10/2026)",
+   "respuesta": "El total a pagar de la factura es de 196.000 pesos."
+  },
+  {
+   "id": "reglamento",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 8.140498982437627,
+   "espera": 1.817,
+   "resumen": "- **Horario:** Lunes a viernes de 9 a 19 horas; sábados de 10 a 13 horas.\n- **Socios:** Cualquier persona mayor de 12 años; menores requieren firma de adulto.\n- **Cuota:** 3.000 pesos mensuales.\n- **Préstamos:** Hasta 3 libros por vez, 14 días; renovación única si nadie más pide.\n- **Demoras:** 2 días de suspensión por día de atraso; reparación o pago de valor si hay daño o pérdida.\n- **Sala de lectura:** Uso libre y gratuito; silencio y no comer permitido.\n- **Computadoras:** 4 equipos con internet para socios, turno de 1 hora.\n- **Donaciones:** Libros en buen estado recibidos de lunes a viernes por la mañana.",
+   "respuesta": "Cada socio puede llevarse hasta tres libros por vez."
+  },
+  {
+   "id": "informe",
+   "cubre": 0.8,
+   "correcta": true,
+   "castellano": true,
+   "pps": 6.005765534913517,
+   "espera": 2.057,
+   "resumen": "- **Medición:** 40 goteros aleatorios en 2024 en 8 hectáreas de viñedo.\n- **Caudal promedio:** 3,6 L/h (diseño: 4 L/h).\n- **Uniformidad:** 82 % (deseado: >90 %).\n- **Presión en cabecera:** 1,2 bar (deseado: 1,5 bar).\n- **Causas:** Filtro sucio, sarro en líneas lejanas, presión baja.\n- **Recomendaciones:** Limpiar filtro cada 15 días, lavar líneas con ácido anual, ajustar válvula a 1,5 bar.\n- **Objetivo:** Recuperar uniformidad >90 % y ahorrar ~10 % de agua.",
+   "respuesta": "La uniformidad de riego se midió del 82 %."
+  },
+  {
+   "id": "escuela",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 7.2483464709613115,
+   "espera": 2.011,
+   "resumen": "- **Salida educativa:** Viernes 14 de noviembre, 8:30 a 13:00 hrs, al Museo de Ciencias Naturales.\n- **Viaje:** Microcontratado por la cooperadora.\n- **Autorización:** Debe presentarse el miércoles 12 de noviembre (sin ella, el alumno queda en la escuela).\n- **Costo:** 4.500 pesos por alumno (pago en secretaría; la cooperadora cubre si no se paga).\n- **Ropa y equipamiento:** Vianda, agua, gorra; no se permiten celulares.\n- **Fin de año:** 5 de diciembre a las 10:00 hrs en el patio.",
+   "respuesta": "La autorización debe entregarse hasta el miércoles 12 de noviembre."
+  },
+  {
+   "id": "privacidad",
+   "cubre": 0.8,
+   "correcta": true,
+   "castellano": true,
+   "pps": 8.576086186122334,
+   "espera": 1.861,
+   "resumen": "1. **Datos recopilados:** Nombre, correo electrónico, teléfono y turnos solicitados. No se recopilan datos de tarjetas de pago.\n2. **Finalidad:** Confirmar y recordar turnos; avisos de cancelación por profesionales. No se utiliza para publicidad.\n3. **Partes involucradas:** Solo se comparten con el profesional o el centro de salud donde se realiza el turno.\n4. **Plazo de conservación:** Mientras la cuenta esté activa, hasta dos años después de su cierre (obligación legal).\n5. **Derechos del usuario:** Puede solicitar ver, corregir o borrar sus datos escribiendo a soporte; respuesta en 10 días hábiles.\n6. **Seguridad:** Los datos se transmiten cifrados y se guardan en servidores en Argentina.\n7. **Actualizaciones:** Se notifica por correo electrónico con 30 días de anticipación en caso de cambios.",
+   "respuesta": "Los datos se guardan hasta dos años después de cerrar la cuenta, por obligaciones legales."
+  },
+  {
+   "id": "receta",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 7.335907335907336,
+   "espera": 2.142,
+   "resumen": "- **24 horas:** Morder gasa 30 min, no enjuagar, no escupir ni tomar sorbete para evitar coágulo.\n- **Comida:** Primer día: alimentos blandos y fríos/ tibios (yogur, puré, helado); evitar calientes, duras o picantes.\n- **Dolor:** Ibuprofeno 400 mg cada 8 h, máximo 3 días; consultar si hay alergia.\n- **Frío:** Hielo envuelto en paño sobre mejilla 15 min sí y 15 min no, durante las primeras 6 horas.\n- **Higiene:** Segundo día: buches suaves con agua tibia y sal después de cada comida; cepillarse sin tocar zona.\n- **Evitar:** Fumar y tomar alcohol durante al menos 72 horas.\n- **Consulta:** Si hay sangrado persistente, fiebre o hinchazón que aumenta después del tercer día.",
+   "respuesta": "Se puede tomar ibuprofeno cada 8 horas."
+  },
+  {
+   "id": "noticia",
+   "cubre": 1,
+   "correcta": true,
+   "castellano": true,
+   "pps": 6.937561942517344,
+   "espera": 1.793,
+   "resumen": "- **Inauguración:** 18 km de nuevas ciclovías en Villa Serrana (unión centro-norte y terminal de ómnibus).\n- **Costo:** 950 millones de pesos.\n- **Financiación:** Parte del programa provincial de movilidad sustentable.\n- **Red total:** 42 km (incluye las nuevas).\n- **Estaciones:** 30 bicicletas públicas gratuitas (primera hora con tarjeta de transporte).\n- **Problema:** Comerciantes de la calle Rivadavia reclaman ocupación de carril de estacionamiento.\n- **Solución:** Se habilitará un nuevo estacionamiento a dos cuadras antes de fin de año.\n- **Meta:** 10% de viajes diarios en bicicleta para 2028 (actualmente 3%).",
+   "respuesta": "La ciudad tiene un total de 42 kilómetros de ciclovías."
+  }
+ ]
+}

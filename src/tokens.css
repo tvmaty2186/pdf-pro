@@ -1,0 +1,111 @@
+/* =========================================================
+   PDF.Pro — ARCHIVO ÚNICO DE DISEÑO
+   Todo el aspecto visual del programa sale de acá.
+   Marca pdf.pro (presentación de octubre 2026): el rojo manda,
+   letra Inter, fondo blanco rosado y texto vino oscuro.
+   ========================================================= */
+
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fuentes/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("fuentes/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  /* --- Marca --- */
+  --marca-nombre: "pdf.pro";
+  --marca-rojo: #E11D3F;            /* rojo pdf.pro: principal */
+  --marca-rojo-profundo: #C3102F;
+  --marca-bordo: #8E0A24;
+  --marca-rosa: #FF3D6E;
+  --marca-magenta: #E52BFF;
+  --marca-violeta: #7047FF;
+  --marca-acento: var(--marca-rojo);
+  --marca-acento-texto: #ffffff;
+  --marca-degradado: linear-gradient(90deg, var(--marca-rojo), var(--marca-rosa) 60%, var(--marca-magenta));
+  --boton-principal: linear-gradient(135deg, #E11D3F, #F0325A);
+  --sombra-boton: 0 4px 14px rgba(225, 29, 63, 0.28);
+  /* barra de arriba: termina en un color liso para que coincida con los botones de Windows (main.js) */
+  --barra-titulo-fondo: linear-gradient(90deg, #B80E2C, #E11D3F 55%);
+  --barra-titulo-texto: #ffffff;
+  --barra-titulo-hover: rgba(255, 255, 255, 0.16);
+  --barra-titulo-linea: linear-gradient(90deg, #FF3D6E, #E52BFF);
+
+  /* --- Tipografía --- */
+  --fuente: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --fuente-titulo: "Inter", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --texto-xs: 12px;
+  --texto-s: 13px;
+  --texto-m: 14px;
+  --texto-l: 20px;
+  --texto-xl: 28px;
+
+  /* --- Formas y espacios --- */
+  --radio-s: 4px;
+  --radio-m: 8px;
+  --radio-l: 12px;
+  --esp-1: 4px;
+  --esp-2: 8px;
+  --esp-3: 12px;
+  --esp-4: 16px;
+  --esp-6: 24px;
+  --alto-barra-titulo: 40px;
+  --alto-barra-comandos: 44px;
+  --ancho-panel: 236px;
+  --ancho-controles-ventana: 140px;
+
+  /* --- Colores claros --- */
+  --fondo-app: #FFF6F6;              /* blanco rosado */
+  --fondo-app-mica: rgba(255, 246, 246, 0.55);
+  --fondo-capa: #ffffff;
+  --fondo-capa-mica: rgba(255, 255, 255, 0.72);
+  --fondo-lienzo: #F3E8EA;           /* alrededor de la hoja: la hoja es la protagonista */
+  --fondo-control: rgba(255, 255, 255, 0.8);
+  --fondo-control-hover: rgba(255, 246, 246, 0.6);
+  --fondo-sutil-hover: rgba(225, 29, 63, 0.06);
+  --fondo-sutil-activo: rgba(225, 29, 63, 0.11);
+  --borde: rgba(58, 13, 23, 0.09);
+  --borde-fuerte: rgba(58, 13, 23, 0.18);
+  --texto: #3A0D17;                  /* vino oscuro */
+  --texto-2: #7A4A56;
+  --texto-3: #8A6470;   /* 4.8:1 sobre blanco (AA) */
+  --sombra-pagina: 0 1px 3px rgba(58, 13, 23, 0.12), 0 6px 18px rgba(58, 13, 23, 0.07);
+  --sombra-menu: 0 10px 28px rgba(58, 13, 23, 0.16);
+  --inicio-fondo: radial-gradient(60% 50% at 85% 0%, rgba(255, 61, 110, 0.13), transparent 70%),
+    radial-gradient(50% 45% at 100% 100%, rgba(229, 43, 255, 0.10), transparent 70%), var(--fondo-app);
+  --resaltado-busqueda: rgba(255, 200, 0, 0.45);
+  --resaltado-actual: rgba(255, 120, 0, 0.55);
+  --peligro: #B3261E;
+  --damero-a: #ffffff;              /* cuadriculado que muestra la transparencia */
+  --damero-b: #e9e9e9;
+
+  --animacion: 180ms ease;          /* movimientos suaves de 150 a 250 ms */
+  --mascota-cuerpo: #FF3D6E;        /* color de la mascota */
+}
+
+:root[data-oscuro="1"] {
+  --fondo-app: #1E0A10;
+  --fondo-app-mica: rgba(30, 10, 16, 0.5);
+  --fondo-capa: #2A1017;
+  --fondo-capa-mica: rgba(42, 16, 23, 0.72);
+  --fondo-lienzo: #16070B;
+  --fondo-control: rgba(255, 255, 255, 0.06);
+  --fondo-control-hover: rgba(255, 255, 255, 0.09);
+  --fondo-sutil-hover: rgba(255, 61, 110, 0.10);
+  --fondo-sutil-activo: rgba(255, 61, 110, 0.18);
+  --borde: rgba(255, 220, 228, 0.09);
+  --borde-fuerte: rgba(255, 220, 228, 0.18);
+  --texto: #FFF1F3;
+  --texto-2: #D9B3BC;
+  --texto-3: #A07C86;
+  --marca-acento: #F0325A;          /* un poco más claro para que se lea sobre fondo oscuro */
+  --barra-titulo-fondo: linear-gradient(90deg, #5E0718, #8E0A24 55%);
+  --inicio-fondo: radial-gradient(60% 50% at 85% 0%, rgba(225, 29, 63, 0.22), transparent 70%),
+    radial-gradient(50% 45% at 100% 100%, rgba(229, 43, 255, 0.12), transparent 70%), var(--fondo-app);
+  --sombra-pagina: 0 1px 3px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --sombra-menu: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --peligro: #ff99a4;
+  --damero-a: #3a3a3a;
+  --damero-b: #2f2f2f;
+}

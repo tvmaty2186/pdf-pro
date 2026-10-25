@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pdf.pro — el editor de PDF que edita como Word</title>
+<meta name="description" content="Editor de PDF gratis para Windows, en castellano. Editás como en Word y lo que no entra sigue en la hoja de abajo. Rellenar, firmar, OCR y asistente de IA sin internet.">
+<link rel="icon" href="simbolo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rojo: #E11D3F; --rojo-hondo: #C3102F; --bordo: #3A0D17; --rosa: #FF3D6E; --magenta: #E52BFF;
+    --fondo: #FFF6F6; --capa: #FFFFFF; --texto: #2A0A12; --sutil: #7A4A55; --borde: rgba(58, 13, 23, .1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --fondo: #1E0A10; --capa: #2A1118; --texto: #FCE9ED; --sutil: #C99AA5; --borde: rgba(255, 220, 228, .1); --bordo: #FCE9ED; }
+  }
+  :root[data-theme="dark"] { --fondo: #1E0A10; --capa: #2A1118; --texto: #FCE9ED; --sutil: #C99AA5; --borde: rgba(255, 220, 228, .1); --bordo: #FCE9ED; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 400 17px/1.6 Inter, system-ui, sans-serif; }
+  a { color: var(--rojo); }
+  .ancho { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 18px 0; }
+  header .ancho { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; }
+  header img { width: 32px; height: 32px; }
+  header nav { margin-left: auto; display: flex; gap: 20px; font-size: 15px; font-weight: 500; }
+  header nav a { color: var(--sutil); text-decoration: none; }
+  .portada { text-align: center; padding: 56px 0 32px; }
+  .portada h1 { font-size: clamp(34px, 6vw, 60px); line-height: 1.08; letter-spacing: -.02em; margin: 0 0 18px; color: var(--bordo); }
+  .portada h1 em { font-style: normal; background: linear-gradient(90deg, var(--rojo), var(--magenta)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .portada p { font-size: 20px; color: var(--sutil); max-width: 640px; margin: 0 auto 30px; }
+  .boton { display: inline-flex; align-items: center; gap: 10px; background: var(--rojo); color: #fff; text-decoration: none; font-weight: 600; padding: 15px 28px; border-radius: 12px; box-shadow: 0 8px 24px rgba(225, 29, 63, .3); }
+  .boton:hover { background: var(--rojo-hondo); }
+  .chico { font-size: 14px; color: var(--sutil); margin-top: 12px; }
+  .captura { display: block; width: 100%; border-radius: 14px; border: 1px solid var(--borde); box-shadow: 0 20px 60px rgba(58, 13, 23, .16); }
+  section { padding: 56px 0; }
+  h2 { font-size: clamp(26px, 4vw, 38px); line-height: 1.15; margin: 0 0 14px; color: var(--bordo); letter-spacing: -.01em; }
+  .marca { display: inline-block; font-size: 13px; font-weight: 600; color: var(--rojo); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .dos { display: grid; grid-template-columns: 1fr 1.3fr; gap: 40px; align-items: center; }
+  .dos.al-reves { grid-template-columns: 1.3fr 1fr; }
+  .dos.al-reves > :first-child { order: 2; }
+  .lista { list-style: none; padding: 0; margin: 18px 0 0; }
+  .lista li { padding-left: 30px; position: relative; margin-bottom: 12px; }
+  .lista li::before { content: "✓"; position: absolute; left: 0; color: var(--rojo); font-weight: 800; }
+  .comparar { margin-top: 18px; border: 1px solid var(--borde); border-radius: 12px; overflow: hidden; background: var(--capa); font-size: 15px; }
+  .comparar div { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--borde); }
+  .comparar div:first-child { border-top: 0; font-weight: 600; color: var(--sutil); }
+  .si { color: var(--rojo); font-weight: 600; }
+  .tarjetas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+  .tarjeta { background: var(--capa); border: 1px solid var(--borde); border-radius: 14px; padding: 20px; }
+  .tarjeta b { display: block; margin-bottom: 6px; color: var(--bordo); }
+  .tarjeta span { color: var(--sutil); font-size: 15px; }
+  .final { text-align: center; }
+  footer { padding: 30px 0 50px; color: var(--sutil); font-size: 14px; text-align: center; }
+  @media (max-width: 760px) {
+    .dos, .dos.al-reves { grid-template-columns: 1fr; gap: 22px; }
+    .dos.al-reves > :first-child { order: 0; }
+    .tarjetas { grid-template-columns: 1fr; }
+    header nav { display: none; }
+    .comparar div { grid-template-columns: 1.2fr 1fr 1fr; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<header><div class="ancho"><img src="simbolo.svg" alt="">pdf.pro
+  <nav><a href="#editor">El editor</a><a href="#todo">Qué más hace</a><a href="https://github.com/tvmaty2186/pdf-pro">Código</a></nav></div></header>
+
+<div class="ancho portada">
+  <h1>El editor de PDF<br>que <em>edita como Word</em>.</h1>
+  <p>Gratis, en castellano, para Windows. Escribís sobre el PDF con su misma letra, y si no entra, sigue solo en la hoja de abajo.</p>
+  <a class="boton" href="https://github.com/tvmaty2186/pdf-pro-versiones/releases/latest/download/PDF.Pro-Instalar.exe">⬇ Descargar para Windows</a>
+  <div class="chico">Windows 10 u 11 · se actualiza solo · sin cuentas ni suscripciones</div>
+</div>
+<div class="ancho"><img class="captura" src="capturas/editar.png" alt="Editando un párrafo de un PDF como en Word, con la misma letra del documento"></div>
+
+<section id="editor"><div class="ancho dos">
+  <div>
+    <span class="marca">Lo nuevo</span>
+    <h2>Un editor distinto a todo lo que hay.</h2>
+    <p>Los editores de siempre tratan cada renglón como una cajita suelta: si agregás texto, se pisa con lo de abajo o se sale de la hoja. pdf.pro edita la hoja como un documento de verdad.</p>
+    <ul class="lista">
+      <li>Escribís directo sobre el texto, con la misma letra, tamaño y color.</li>
+      <li>Lo que no entra pasa a la hoja de abajo, y en cascada a las siguientes.</li>
+      <li>Encabezados y pies de página quedan fijos en su lugar.</li>
+      <li>El resto de la hoja queda idéntico.</li>
+    </ul>
+    <div class="comparar">
+      <div><span></span><span>pdf.pro</span><span>Acrobat</span></div>
+      <div><span>El texto que sobra pasa a la hoja siguiente</span><span class="si">Sí</span><span>No</span></div>
+      <div><span>Asistente de IA sin internet</span><span class="si">Sí</span><span>No</span></div>
+      <div><span>Precio para editar</span><span class="si">Gratis</span><span>Suscripción</span></div>
+    </div>
+  </div>
+  <img class="captura" src="capturas/desborde.png" alt="El texto agregado al final de la hoja 1 sigue arriba de la hoja 2">
+</div></section>
+
+<section><div class="ancho dos al-reves">
+  <div>
+    <span class="marca">Asistente</span>
+    <h2>Resume y responde, sin mandar nada a internet.</h2>
+    <p>Un modelo de IA corre en tu PC: resume el documento y contesta lo que le preguntes. Trabaja en segundo plano y te avisa cuando termina. El resumen se guarda como Word o PDF. Si preferís, también funciona con Claude o Gemini.</p>
+  </div>
+  <img class="captura" src="capturas/resumir.png" alt="Panel con el resumen de un contrato hecho sin internet">
+</div></section>
+
+<section><div class="ancho dos">
+  <div>
+    <span class="marca">OCR</span>
+    <h2>Copiá el texto de un escaneo.</h2>
+    <p>Marcás una parte de una hoja escaneada o una foto y pdf.pro la lee, con tildes y eñes, sin internet. Lo revisás y lo copiás.</p>
+  </div>
+  <img class="captura" src="capturas/ocr.png" alt="Texto reconocido de una parte del documento, listo para copiar">
+</div></section>
+
+<section id="todo"><div class="ancho">
+  <span class="marca">Y además</span>
+  <h2>Todo lo que necesitás con un PDF.</h2>
+  <div class="tarjetas">
+    <div class="tarjeta"><b>Rellenar formularios</b><span>Escribís derecho sobre los renglones. ✓, ✗, fecha de hoy y "repetir hacia abajo" para planillas.</span></div>
+    <div class="tarjeta"><b>Firmar con un clic</b><span>Tu firma o sello guardados. La foto se limpia sola.</span></div>
+    <div class="tarjeta"><b>Organizar páginas</b><span>Mover, girar, borrar, insertar, separar y unir PDF.</span></div>
+    <div class="tarjeta"><b>Comprimir y reparar</b><span>Achicar para mandar por mail, arreglar PDF dañados, quitar hojas en blanco.</span></div>
+    <div class="tarjeta"><b>Word, Excel y fotos</b><span>Pasar a Word o Excel, y crear PDF desde fotos u Office.</span></div>
+    <div class="tarjeta"><b>Proteger y censurar</b><span>Contraseñas y censura que borra de verdad.</span></div>
+  </div>
+</div></section>
+
+<section class="final"><div class="ancho">
+  <h2>Probalo, es gratis.</h2>
+  <p style="color:var(--sutil);margin:0 0 26px">Código abierto: lo podés revisar y mejorar en GitHub.</p>
+  <a class="boton" href="https://github.com/tvmaty2186/pdf-pro-versiones/releases/latest/download/PDF.Pro-Instalar.exe">⬇ Descargar para Windows</a>
+  <div class="chico">Si Windows muestra "Editor desconocido": Más información → Ejecutar de todas formas.</div>
+</div></section>
+
+<footer>Hecho por Matías Russo · <a href="https://github.com/tvmaty2186/pdf-pro">Código en GitHub</a> · Licencia AGPL-3.0</footer>
+</body>
+</html>

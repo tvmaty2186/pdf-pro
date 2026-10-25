@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; font-src 'self' data:">
+  <title>pdf.pro</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <!-- Barra de título: menús + pestañas (los botones de ventana los pone Windows) -->
+  <header id="barra-titulo">
+    <div class="marca"><img src="marca/simbolo.svg" alt=""><span class="logotipo">pdf<b>.pro</b></span></div>
+    <nav id="menus" aria-label="Menú principal"></nav>
+    <div id="pestanas" role="tablist"></div>
+    <button id="todas-pestanas" class="todas-pestanas" hidden title="Ver todas las pestañas"></button>
+    <div class="arrastre"></div>
+  </header>
+
+  <!-- Barra de comandos -->
+  <div id="barra-comandos" hidden></div>
+
+  <!-- Barra de búsqueda -->
+  <div id="barra-buscar" hidden>
+    <input id="buscar-texto" class="campo" type="search" placeholder="Buscar en el documento" aria-label="Buscar en el documento">
+    <span id="buscar-estado"></span>
+    <button class="btn-icono" id="buscar-ant" title="Anterior (Mayús+Enter)"></button>
+    <button class="btn-icono" id="buscar-sig" title="Siguiente (Enter)"></button>
+    <button class="btn-icono" id="buscar-cerrar" title="Cerrar (Esc)"></button>
+  </div>
+
+  <main id="cuerpo">
+    <aside id="panel" hidden>
+      <div class="panel-pestanas" role="tablist">
+        <button data-vista="miniaturas" role="tab" title="Páginas">Páginas</button>
+        <button data-vista="marcadores" role="tab" title="Índice (marcadores)">Índice</button>
+        <button data-vista="comentarios" role="tab" title="Comentarios">Comentarios</button>
+        <button class="panel-contraer" title="Contraer el panel (queda una tira al costado)">«</button>
+      </div>
+      <div class="panel-borde" title="Arrastrá para cambiar el ancho"></div>
+      <div id="panel-contenido"></div>
+    </aside>
+    <nav id="rapidas" aria-label="Herramientas rápidas" hidden></nav>
+    <section id="area"></section>
+  </main>
+
+  <!-- Pantalla de inicio -->
+  <section id="inicio" hidden>
+    <div class="inicio-caja">
+      <h1 id="saludo">Hola. <span class="destacado">¿Qué abrimos hoy?</span></h1>
+      <p class="inicio-autor">Hecho por Matías Russo, para amigos y familia</p>
+      <div class="inicio-acciones">
+        <button class="btn-primario" id="inicio-abrir"></button>
+        <p class="sutil">o arrastrá un PDF a esta ventana</p>
+      </div>
+      <div id="accesos"></div>
+      <h2>Recientes</h2>
+      <ul id="lista-recientes"></ul>
+    </div>
+  </section>
+
+  <div id="soltar" hidden><div>Soltá para abrir</div></div>
+  <div id="aviso" role="status" class="vacio"><span>Listo</span></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
