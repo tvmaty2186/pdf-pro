@@ -142,8 +142,9 @@ ipcMain.handle('recuperar-limpiar', () => borrarRecuperacion());
 // Las versiones nuevas se publican en github.com/tvmaty2186/pdf-pro-versiones (público, solo instaladores).
 // Se busca al abrir y desde Ayuda; se descarga solo cuando el usuario dice que sí, y se instala al reiniciar.
 let actualizador = null;
+// la versión de Microsoft Store se actualiza desde la tienda (process.windowsStore)
 function updater() {
-  if (actualizador || !app.isPackaged) return actualizador;
+  if (actualizador || !app.isPackaged || process.windowsStore) return actualizador;
   actualizador = require('electron-updater').autoUpdater;
   actualizador.autoDownload = false;
   actualizador.autoInstallOnAppQuit = true;
@@ -155,7 +156,7 @@ function updater() {
 }
 ipcMain.handle('actualizacion-buscar', async () => {
   const u = updater();
-  if (!u) return { error: 'Las actualizaciones funcionan en el programa instalado.' };
+  if (!u) return { error: process.windowsStore ? 'Esta versión se actualiza sola desde Microsoft Store.' : 'Las actualizaciones funcionan en el programa instalado.' };
   try {
     const r = await u.checkForUpdates();
     const nueva = r?.updateInfo?.version;
@@ -593,7 +594,8 @@ function actualizarBandeja() {
 }
 const reg = args => new Promise(r => execFile('reg', args, { windowsHide: true }, e => r(!e)));
 async function menuContextual() {
-  if (process.platform !== 'win32' || !app.isPackaged) return;
+  // en la versión de la tienda el registro queda aislado (Explorer no lo ve) y la ruta cambia con cada versión
+  if (process.platform !== 'win32' || !app.isPackaged || process.windowsStore) return;
   const exe = process.execPath, base = 'HKCU\\Software\\Classes\\SystemFileAssociations';
   const entradas = [['.pdf', 'PDFPro.Abrir', 'Abrir con PDF.Pro', `"${exe}" "%1"`, prefs.menuPdf],
     ...['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'].map(ext => [ext, 'PDFPro.Crear', 'Crear PDF con PDF.Pro', `"${exe}" --crear-pdf "%1"`, prefs.menuImagenes])];
@@ -608,7 +610,7 @@ async function menuContextual() {
 }
 function aplicarSistema(clave) {
   if (!clave || clave === 'bandeja') actualizarBandeja();
-  if ((!clave || clave === 'iniciarConWindows') && app.isPackaged)
+  if ((!clave || clave === 'iniciarConWindows') && app.isPackaged && !process.windowsStore)
     try { app.setLoginItemSettings({ openAtLogin: !!prefs.iniciarConWindows, name: 'PDF.Pro', args: ['--oculto'] }); } catch {}
   if (!clave || clave === 'menuPdf' || clave === 'menuImagenes') menuContextual();
 }

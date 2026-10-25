@@ -9,7 +9,8 @@
     "start": "electron .",
     "test": "node pruebas/correr.js",
     "dist": "node build/clave-errores.js && node build/ia-local-win.js && node build/ocr-win.js && electron-builder --win nsis --x64",
-    "publicar": "node build/clave-errores.js && node build/ia-local-win.js && node build/ocr-win.js && electron-builder --win nsis --x64 --publish always"
+    "publicar": "node build/clave-errores.js && node build/ia-local-win.js && node build/ocr-win.js && electron-builder --win nsis --x64 --publish always",
+    "tienda": "node build/clave-errores.js && node build/ia-local-win.js && node build/ocr-win.js && electron-builder --win appx --x64 --publish never"
   },
   "build": {
     "appId": "com.pdfpro.app",
@@ -309,7 +310,19 @@
           "dict.txt"
         ]
       }
-    ]
+    ],
+    "appx": {
+      "identityName": "Tvmaty2186.pdf.pro",
+      "publisher": "CN=123E9FB0-FFA7-455C-9D0C-C861C7E177B6",
+      "publisherDisplayName": "Tvmaty2186",
+      "applicationId": "PDFPro",
+      "displayName": "pdf.pro",
+      "backgroundColor": "#E11D3F",
+      "languages": [
+        "es-AR"
+      ],
+      "artifactName": "pdf.pro-${version}.${ext}"
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

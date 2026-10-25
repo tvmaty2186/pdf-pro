@@ -1,0 +1,26 @@
+# Arma el paquete para Microsoft Store (MSIX/APPX) en una máquina Windows: solo se puede armar en Windows.
+# Se dispara con un commit cuyo mensaje tenga "[tienda]" (o a mano desde Actions). El paquete queda en "Artifacts" del run;
+# se sube a Partner Center (Microsoft lo firma).
+name: Paquete para Microsoft Store
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  appx:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[tienda]')
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run tienda
+        env:
+          PDFPRO_CLAVE_ERRORES: ${{ secrets.PDFPRO_CLAVE_ERRORES }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdf.pro-tienda
+          path: dist/*.appx
+          if-no-files-found: error
