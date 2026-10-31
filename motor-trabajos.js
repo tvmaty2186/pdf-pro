@@ -149,7 +149,8 @@ ipcMain.handle('pagina-contenido', async (_e, datos, n) => {
 // Letras que no se ven: invisibles (salvo el texto reconocido sobre un escaneo) o tapadas por algo opaco dibujado
 // después (un recuadro blanco encima de un dato viejo). Se recorre la página en orden y se anota quién va arriba.
 async function letrasOcultas(pg) {
-  const m = await mu(), glifos = new Map(), tapas = [], imagenes = [];
+  const m = await mu(), glifos = new Map(), tapas = [], imagenes = [], bordes = [];
+  const raya = r => { if (r[2] - r[0] < 2.5 && r[3] - r[1] > 6) bordes.push(r); };
   let orden = 0, raro = 0;
   const clave = (x, y, u) => Math.round(x * 2) + '|' + Math.round(y * 2) + '|' + u;
   const anotar = (t, ctm, visible) => {
@@ -164,22 +165,25 @@ async function letrasOcultas(pg) {
       clipText(t, ctm) { anotar(t, ctm, false); },
       clipStrokeText(t, _s, ctm) { anotar(t, ctm, false); },
       ignoreText(t, ctm) { anotar(t, ctm, false); },
-      fillPath(p, _eo, ctm, _cs, _c, alpha) { if (!raro && alpha > 0.99) tapas.push({ o: orden++, r: p.getBounds(null, ctm) }); },
+      fillPath(p, _eo, ctm, _cs, _c, alpha) { const r = p.getBounds(null, ctm); raya(r); if (!raro && alpha > 0.99) tapas.push({ o: orden++, r }); },
+      strokePath(p, st, ctm) { raya(p.getBounds(st, ctm)); },
       fillImage(_i, ctm) { imagenes.push({ o: orden++, r: caja(ctm) }); },
       beginGroup(_a, _cs, _iso, _ko, modo, alpha) { if (raro || modo !== 'Normal' || alpha < 0.99) raro++; },
       endGroup() { if (raro) raro--; },
       beginMask() { raro++; }, endMask() { if (raro) raro--; }
     });
     pg.run(dev, m.Matrix.identity); dev.close();
-  } catch (e) { console.error('letrasOcultas', e); return () => false; }
+  } catch (e) { console.error('letrasOcultas', e); return Object.assign(() => false, { bordes: [] }); }
   const dentro = (r, x, y) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3];
-  return (o, c, tam = 10) => {
+  const oculta = (o, c, tam = 10) => {
     // la misma letra en el mismo lugar dos veces (dato viejo tapado y el nuevo encima): se toman en el orden en que se dibujaron
     const g = glifos.get(clave(o[0], o[1], c.codePointAt(0)))?.shift();
     if (!g) return false;
     if (!g.visible && !imagenes.some(im => im.o < g.o && dentro(im.r, o[0], o[1]))) return true;
     return tapas.some(t => t.o > g.o && dentro(t.r, o[0] + tam * 0.2, o[1] - tam * 0.3));
   };
+  oculta.bordes = bordes; // rayas verticales finas (bordes de celdas), para saber si un renglón está pegado a una
+  return oculta;
 }
 // Letra de código de barras (o un texto con su forma: #.123.456.#, *ABC123*): es un dibujo, no se edita
 const esBarras = (f, t) => /bar ?code|code ?(39|93|128)|3 ?of ?9|idautomat|i2of5|interleaved|ean-?13|upc-?a|postnet|datamatrix|pdf417|qr ?code|(^|\+)c(39|128)/i.test(f)
@@ -299,7 +303,8 @@ ipcMain.handle('pagina-parrafos', async (_e, datos, n) => {
       else if (L.length >= 2 && rango(izq) < tol) alineacion = 'izq';
       else if (L.length >= 2 && rango(L.map(x => x.x1)) < tol) alineacion = 'der';
       else if (L.length >= 2 && rango(L.map(x => (x.x0 + x.x1) / 2)) < tol) alineacion = 'centro';
-      else if (L.length === 1 && a.x0 > margenIzq + 20 && [anchoP / 2, (margenIzq + margenDer) / 2].some(c => Math.abs((a.x0 + a.x1) / 2 - c) < 10)) alineacion = 'centro';
+      // un renglón pegado al borde izquierdo de una celda está alineado a la izquierda aunque caiga en el centro de la hoja
+      else if (L.length === 1 && !oculta.bordes.some(r => r[2] <= a.x0 + 0.5 && a.x0 - r[2] < 12 && r[1] < a.y1 && r[3] > a.y0) && a.x0 > margenIzq + 20 && [anchoP / 2, (margenIzq + margenDer) / 2].some(c => Math.abs((a.x0 + a.x1) / 2 - c) < 10)) alineacion = 'centro';
       else if (L.length === 1 && a.x0 > anchoP * 0.4 && Math.abs(a.x1 - margenDer) < 6) alineacion = 'der';
       const x0 = Math.min(...L.map(x => x.x0)), x1 = Math.max(...L.map(x => x.x1));
       // ancho disponible: un renglón solo puede crecer hasta el margen (o hasta lo que tenga al lado en el mismo renglón)
@@ -420,12 +425,53 @@ ipcMain.handle('escribir-original', async (_e, datos, n, fuenteComun, entradas) 
 });
 // Fondo para el modo documento: la página dibujada sin el texto que se está editando (quedan imágenes, líneas, tablas
 // y el texto que no se edita). Las zonas son tiras dentro de cada renglón editable, en puntos del PDF.
+// MuPDF, al borrar texto, reescribe el contenido de la hoja. En algunos PDF (hechos con Word, con el modo de dibujo
+// del texto heredado de un bloque a otro) lo pierde y el resto del texto sale con contorno: más grueso, como negrita.
+// Se cuenta el texto con contorno antes y después; si aparece más, en vez de reescribir la hoja se tapan las letras
+// de esas zonas con el color del papel (el texto viejo queda escondido debajo; pdf.pro ya no lo muestra ni lo lee).
+function textoConContorno(m, pg) {
+  let n = 0;
+  const dev = new m.Device({ strokeText() { n++; }, clipStrokeText() { n++; } });
+  pg.run(dev, m.Matrix.identity); dev.close();
+  return n;
+}
+function agregarContenido(pdf, n, ops) {
+  const pagina = pdf.findPage(n - 1), antes = pagina.get('Contents'), lista = pdf.newArray();
+  lista.push(pdf.addStream('q\n', pdf.newDictionary()));
+  if (antes && !antes.isNull()) { const a = antes.resolve(); if (a.isArray()) a.forEach(x => lista.push(x)); else lista.push(antes); }
+  lista.push(pdf.addStream('Q\nq\n' + ops.join('\n') + '\nQ\n', pdf.newDictionary()));
+  pagina.put('Contents', lista);
+}
+// zonasMu: rects en coordenadas de MuPDF. Tapa justo las letras que caen adentro (su caja entera, no solo la zona)
+function taparLetras(m, pdf, pg, n, zonasMu) {
+  const cajas = zonasMu.map(() => null);
+  // la caja de la tinta (de la base hacia arriba lo alto de una mayúscula, hacia abajo lo que baja una "p"), no la
+  // de la letra entera: así no tapa el borde de la celda que pasa justo abajo
+  pg.toStructuredText('preserve-whitespace').walk({ onChar(c, o, _f, s, q) {
+    if (!c.trim()) return;
+    const b = [Math.min(q[0], q[4]), o[1] - s * 0.8, Math.max(q[2], q[6]), o[1] + s * (/[gjpqyQç,;()[\]{}|]/.test(c) ? 0.24 : 0.05)], cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+    zonasMu.forEach((z, i) => { if (cx >= z[0] && cx <= z[2] && cy >= z[1] && cy <= z[3]) { const a = cajas[i]; cajas[i] = a ? [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])] : b; } });
+  } });
+  const usar = cajas.filter(Boolean).map(b => [b[0] - 0.5, b[1] - 0.3, b[2] + 0.5, b[3] + 0.15]);
+  if (!usar.length) return;
+  const papel = colorAlrededor(m, pg, usar), inv = invertir(pg.getTransform()), r3 = v => Math.round(v * 1000) / 1000;
+  agregarContenido(pdf, n, usar.map((r, i) => { const [a, b, c, d] = rectCon(inv, ...r); return `${(papel[i] || [255, 255, 255]).map(v => (v / 255).toFixed(3)).join(' ')} rg ${r3(a)} ${r3(b)} ${r3(c - a)} ${r3(d - b)} re f`; }));
+}
+// Borra el texto de esas zonas (rects en coordenadas de MuPDF) en la página; si MuPDF engrosa el resto, devuelve false
+// y no sirve esa copia (quien llama usa taparLetras sobre una copia nueva)
+function borrarTexto(m, pg, zonasMu) {
+  const antes = textoConContorno(m, pg);
+  for (const r of zonasMu) pg.createAnnotation('Redact').setRect(r);
+  pg.applyRedactions(false, m.PDFPage.REDACT_IMAGE_NONE, m.PDFPage.REDACT_LINE_ART_NONE, m.PDFPage.REDACT_TEXT_REMOVE);
+  return textoConContorno(m, pg) <= antes;
+}
 ipcMain.handle('pagina-fondo', async (_e, datos, n, zonas, escala) => {
-  const d = await abrirMu(datos);
+  let d = await abrirMu(datos);
   try {
-    const m = await mu(), pdf = d.asPDF(), pg = pdf.loadPage(n - 1), M = pg.getTransform();
-    for (const r of zonas) pg.createAnnotation('Redact').setRect(rectCon(M, ...r));
-    if (zonas.length) pg.applyRedactions(false, m.PDFPage.REDACT_IMAGE_NONE, m.PDFPage.REDACT_LINE_ART_NONE, m.PDFPage.REDACT_TEXT_REMOVE);
+    const m = await mu();
+    let pdf = d.asPDF(), pg = pdf.loadPage(n - 1);
+    const Z = zonas.map(r => rectCon(pg.getTransform(), ...r));
+    if (Z.length && !borrarTexto(m, pg, Z)) { d.destroy(); d = await abrirMu(datos); pdf = d.asPDF(); pg = pdf.loadPage(n - 1); taparLetras(m, pdf, pg, n, Z); pg = pdf.loadPage(n - 1); }
     const px = pg.toPixmap(m.Matrix.scale(escala, escala), m.ColorSpace.DeviceRGB, false, true);
     return px.asPNG();
   } finally { d.destroy(); }
@@ -531,9 +577,17 @@ function colorAlrededor(m, pg, rects) {
   });
 }
 ipcMain.handle('borrar-zona', async (_e, datos, n, rects, { texto = true, imagenes = false } = {}) => {
-  const d = await abrirMu(datos);
+  let d = await abrirMu(datos);
   try {
-    const m = await mu(), pdf = d.asPDF(), pg = pdf.loadPage(n - 1), M = pg.getTransform();
+    const m = await mu();
+    // solo texto (lo que hace el editor): con control de que MuPDF no engrose el resto de la hoja
+    if (texto && !imagenes) {
+      let pdf = d.asPDF(), pg = pdf.loadPage(n - 1);
+      const Z = rects.map(r => rectCon(pg.getTransform(), ...r));
+      if (!borrarTexto(m, pg, Z)) { d.destroy(); d = await abrirMu(datos); pdf = d.asPDF(); pg = pdf.loadPage(n - 1); taparLetras(m, pdf, pg, n, Z); }
+      return pdf.saveToBuffer('compress').asUint8Array();
+    }
+    const pdf = d.asPDF(), pg = pdf.loadPage(n - 1), M = pg.getTransform();
     // sobre una hoja escaneada, el hueco de la imagen se rellena con el color del papel de alrededor (no queda un cuadro)
     const papel = imagenes && imagenes !== 'quitar' ? colorAlrededor(m, pg, rects.map(r => rectCon(M, ...r))) : [];
     for (const r of rects) {
@@ -550,13 +604,7 @@ ipcMain.handle('borrar-zona', async (_e, datos, n, rects, { texto = true, imagen
       pg.applyRedactions(false, m.PDFPage.REDACT_IMAGE_NONE, m.PDFPage.REDACT_LINE_ART_REMOVE_IF_COVERED, m.PDFPage.REDACT_TEXT_NONE);
     }
     const tapas = rects.map((r, i) => papel[i] && `${papel[i].map(v => (v / 255).toFixed(3)).join(' ')} rg ${Math.min(r[0], r[2])} ${Math.min(r[1], r[3])} ${Math.abs(r[2] - r[0])} ${Math.abs(r[3] - r[1])} re f`).filter(Boolean);
-    if (tapas.length) {
-      const pagina = pdf.findPage(n - 1), antes = pagina.get('Contents'), lista = pdf.newArray();
-      lista.push(pdf.addStream('q\n', pdf.newDictionary()));
-      if (antes && !antes.isNull()) { const a = antes.resolve(); if (a.isArray()) a.forEach(x => lista.push(x)); else lista.push(antes); }
-      lista.push(pdf.addStream('Q\nq\n' + tapas.join('\n') + '\nQ\n', pdf.newDictionary()));
-      pagina.put('Contents', lista);
-    }
+    if (tapas.length) agregarContenido(pdf, n, tapas);
     return pdf.saveToBuffer('compress').asUint8Array();
   } finally { d.destroy(); }
 });

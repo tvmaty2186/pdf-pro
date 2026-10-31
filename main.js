@@ -91,9 +91,12 @@ function imagenesDeArgs(argv) {
     mostrarVentana();
   }, 900);
 }
+// Los archivos se mandan recién cuando la interfaz avisó que está lista (antes, a veces llegaban a la ventana antes de
+// que estuviera escuchando y el PDF no se abría: el programa quedaba en la pantalla de inicio)
+let interfazLista = false;
 function enviarArchivos(lista) {
   if (!lista.length) return;
-  if (win && !win.webContents.isLoading()) win.webContents.send('abrir-archivos', lista);
+  if (win && !win.isDestroyed() && interfazLista) win.webContents.send('abrir-archivos', lista);
   else pendientes.push(...lista);
 }
 function aplicarTema() {
@@ -194,8 +197,10 @@ function cerrarCarga() {
   setTimeout(() => { if (win && !win.isDestroyed() && !win.isVisible()) mostrarPrincipal(); carga?.close(); }, Math.max(260, 1500 - (Date.now() - cargaDesde)));
 }
 ipcMain.on('interfaz-lista', () => {
+  interfazLista = true;
   setTimeout(() => require('./fuentes.js').precalentar(), 4000); // la lista de fuentes queda lista antes de editar texto
   if (carga) { if (pendientes.length) avance(90, 'Abriendo tus documentos…'); cerrarCarga(); }
+  if (pendientes.length && win && !win.isDestroyed()) { win.webContents.send('abrir-archivos', pendientes); pendientes = []; }
   if (process.env.PDFPRO_CAPTURA_CARGA && carga) carga.webContents.capturePage().then(i => fs.writeFileSync(process.env.PDFPRO_CAPTURA_CARGA, i.toPNG()));
 });
 
@@ -206,6 +211,7 @@ function mostrarPrincipal() {
   win.show();
 }
 function crearVentana() {
+  interfazLista = false;
   aplicarTema();
   win = new BrowserWindow({
     width: 1280, height: 820, minWidth: 760, minHeight: 500, show: false,
@@ -251,11 +257,10 @@ function crearVentana() {
     if (!win || win.isDestroyed() || d?.reason === 'clean-exit') return;
     dialog.showMessageBoxSync(win, { type: 'warning', title: 'pdf.pro', message: 'La ventana se cerró por un problema.',
       detail: 'Puede ser falta de memoria con un documento muy grande. Se vuelve a abrir y vas a poder recuperar los documentos que tenían cambios.' });
-    win.reload();
+    interfazLista = false; win.reload();
   });
   win.webContents.on('did-finish-load', () => {
     avance(75, 'Cargando el visor…');
-    if (pendientes.length) { win.webContents.send('abrir-archivos', pendientes); pendientes = []; }
     app.emit('ventana-lista');
     // Solo para pruebas de desarrollo: PDFPRO_CAPTURA=archivo.png [PDFPRO_JS=código a ejecutar]
     if (process.env.PDFPRO_CAPTURA) setTimeout(async () => {
