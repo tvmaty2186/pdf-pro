@@ -353,17 +353,28 @@ function leerToUnicode(txt) {
 }
 function fuenteOriginal(pdf, n, nombre) {
   const sin = x => String(x || '').replace(/^[A-Z]{6}\+/, '');
-  const pagina = pdf.findPage(n - 1), fuentes = pagina.getInheritable('Resources').get('Font');
-  if (!fuentes || fuentes.isNull()) return null;
+  const pagina = pdf.findPage(n - 1), recursos = pagina.getInheritable('Resources');
   let hallada = null;
-  fuentes.forEach((v, k) => { if (!hallada) { const f = v.resolve(), b = f.get('BaseFont'); if (b && !b.isNull() && (b.asName() === nombre || sin(b.asName()) === sin(nombre))) hallada = { recurso: String(k), obj: v, f }; } });
+  // primero el nombre exacto (con su prefijo de subconjunto: dos "Arial" recortadas distintas no son la misma letra)
+  let exacto = true;
+  const buscar = (fuentes, propio) => { if (fuentes && !fuentes.isNull()) fuentes.forEach((v, k) => { if (!hallada) { const f = v.resolve(), b = f.get('BaseFont'); if (b && !b.isNull() && (b.asName() === nombre || (!exacto && sin(b.asName()) === sin(nombre)))) hallada = { recurso: propio ? String(k) : 'PDFPro' + (v.isIndirect() ? v.asIndirect() : k), obj: v, f }; } }); };
+  // a veces la letra no está en la hoja sino adentro de un dibujo (Form XObject) de la hoja: se usa ese mismo objeto con
+  // un nombre propio (escribir-original lo engancha a la hoja por su número)
+  const enDibujos = (res, prof) => { const xo = res?.get?.('XObject'); if (!xo || xo.isNull() || prof > 3) return; xo.forEach(v => { if (hallada) return; const o = v.resolve(); if (o.get('Subtype')?.asName?.() === 'Form') { const r = o.get('Resources'); if (r && !r.isNull()) { buscar(r.get('Font'), false); enDibujos(r, prof + 1); } } }); };
+  for (const e of [true, false]) { exacto = e; if (hallada) break; buscar(recursos?.get('Font'), true); if (!hallada) enDibujos(recursos, 0); }
   if (!hallada) return null;
+  if (hallada.recurso.startsWith('PDFPro') && !hallada.obj.isIndirect()) return null; // fuera de la hoja solo sirve si tiene número
   const { f } = hallada, tipo = f.get('Subtype').asName(), dosBytes = tipo === 'Type0';
   if (dosBytes && !/Identity-H/.test(f.get('Encoding')?.asName?.() || '')) return null;
   if (tipo === 'Type3') return null;
-  const tu = f.get('ToUnicode');
-  if (!tu || tu.isNull()) return null;
-  const codigos = leerToUnicode(tu.readStream().asString?.() ?? Buffer.from(tu.readStream().asUint8Array()).toString('latin1'));
+  const tu = f.get('ToUnicode'), cod = f.get('Encoding')?.asName?.() || '';
+  let codigos;
+  if (tu && !tu.isNull()) codigos = leerToUnicode(tu.readStream().asString?.() ?? Buffer.from(tu.readStream().asUint8Array()).toString('latin1'));
+  // fuente simple sin tabla propia pero con la codificación estándar de Windows: cada letra común es su propio código
+  else if (!dosBytes && /WinAnsi|Standard/.test(cod) && !f.get('Encoding').isDictionary?.()) {
+    codigos = new Map();
+    for (let c = 32; c < 256; c++) if (c < 127 || c >= 160) codigos.set(c.toString(16).toUpperCase().padStart(2, '0'), String.fromCharCode(c));
+  } else return null;
   const anchos = {};
   if (dosBytes) {
     const df = f.get('DescendantFonts').resolve().get(0).resolve(), dw = df.get('DW')?.isNumber?.() ? df.get('DW').asNumber() : 1000, W = df.get('W');
