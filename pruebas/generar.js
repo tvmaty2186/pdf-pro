@@ -177,7 +177,11 @@ async function recortada() {
   await guardar('10-recortada.pdf', d);
 }
 
+// Planilla mensual inventada (la misma que usa pruebas/planilla.cjs), para probar el asistente con planillas
+async function planilla() { fs.writeFileSync(path.join(dir, '14-planilla.pdf'), await require('./planilla.cjs').inventada()); }
+
 (async () => {
+  if (process.argv[2] === 'planilla') { await planilla(); return console.log('Listo'); }
   if (process.argv[2] === 'asistencia') { await asistencia(); return console.log('Listo'); }
   if (process.argv[2] === 'firmado') { await firmado(); return console.log('Listo'); }
   if (process.argv[2] === 'cascada') { await cascada(); return console.log('Listo'); }

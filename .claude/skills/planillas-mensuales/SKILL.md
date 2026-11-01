@@ -10,6 +10,10 @@ Kilómetros / Firma. Cada servicio (terapias, escuela…) ocupa una o más hojas
 La herramienta es `herramientas/planillas/planilla.cjs` (usa el mismo motor que pdf.pro). Respuestas para Matías:
 cortas, claras, en español rioplatense, sin listas largas.
 
+En el programa, el asistente (Duki) hace lo mismo con dos herramientas: `revisar_planilla` y `armar_planilla`
+(`asistente.js`, reglas en `REGLAS_PLANILLAS`; corren en el motor con `planilla-revisar` / `planilla-armar`). Si
+cambiás una regla acá, cambiala también allá.
+
 ## Antes de empezar
 
 - Es una **declaración jurada**. Las fechas tienen que ser días en que el servicio se hizo de verdad: si el mes no

@@ -4,7 +4,7 @@
 const fs = require('fs'), os = require('os'), path = require('path');
 const { execFileSync } = require('child_process');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pdfpro-planilla-'));
+const tmp = require.main === module ? fs.mkdtempSync(path.join(os.tmpdir(), 'pdfpro-planilla-')) : null;
 const herramienta = path.join(__dirname, '..', 'herramientas', 'planillas', 'planilla.cjs');
 
 async function inventada() {
@@ -46,7 +46,8 @@ async function inventada() {
   return d.save();
 }
 
-(async () => {
+module.exports = { inventada };
+if (require.main === module) (async () => {
   const entrada = path.join(tmp, 'marzo.pdf'), salida = path.join(tmp, 'abril.pdf');
   fs.writeFileSync(entrada, await inventada());
   const correr = (...a) => execFileSync('node', [herramienta, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });

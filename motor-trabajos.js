@@ -7,6 +7,9 @@ module.exports = function registrar(ipcMain) {
 // solo en las pruebas automáticas: tirar el motor a propósito para ver que el programa se recupera
 if (process.env.PDFPRO_CAPTURA) ipcMain.handle('motor-caer', () => process.exit(3));
 ipcMain.handle('controlar-pdf', (_e, datos, control) => controlarPdf(datos, control));
+// Planillas mensuales de asistencia (herramientas/planillas): las usa el asistente
+ipcMain.handle('planilla-revisar', (_e, datos, feriados) => require('./herramientas/planillas/planilla.cjs').revisarPdf(datos, feriados || []));
+ipcMain.handle('planilla-armar', (_e, datos, op) => require('./herramientas/planillas/planilla.cjs').armarPdf(datos, op || {}));
 ipcMain.handle('pdf-a-office', async (_e, tipo, datos) => {
   const conv = require('./convertir.js'), d = await abrirMu(datos);
   try { return tipo === 'xlsx' ? conv.pdfAExcel(await mu(), d) : conv.pdfAWord(await mu(), d); } finally { d.destroy(); }

@@ -150,7 +150,14 @@ async function llamar(pedido, tarea = 'consulta') {
   return r;
 }
 const sinCupo = new Map(); // modelo de Gemini → hasta cuándo no se prueba (se quedó sin cupo)
+// solo pruebas automáticas: una "IA" de mentira para la charla, con las respuestas en orden (PDFPRO_CHARLA_FALSA = JSON)
+let charlaFalsa = null;
 async function llamarIA(pedido, tarea) {
+  if (process.env.PDFPRO_CHARLA_FALSA && /^charla/.test(tarea)) {
+    charlaFalsa ||= JSON.parse(process.env.PDFPRO_CHARLA_FALSA);
+    const sig = charlaFalsa.shift() || { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Listo.' }] };
+    return { ...sig, content: sig.content.map((b, i) => b.type === 'tool_use' ? { id: 'prueba' + i, ...b } : b), costo: 0, usage: {} };
+  }
   if (esGemini(pedido.model)) { // Gemini (clave gratis de AI Studio): no suma al gasto ni lo frena el tope
     if (!leerClaveGemini()) throw new Error('SIN_CLAVE_GEMINI');
     if (pedido.model === 'gemini-sin-modelo') throw new Error('SIN_MODELOS_GEMINI');
@@ -425,9 +432,28 @@ const HERRAMIENTAS = [
   { name: 'agregar_ejemplos', description: 'Agrega a los ejemplos del perfil una carpeta o un archivo de la computadora que el usuario te indica con su ruta (por ejemplo C:\\Users\\...\\Asistencias) y la estudia. Usala cuando el usuario te pase una ruta y diga que ahí hay ejemplos o información.',
     input_schema: { type: 'object', properties: { ruta: { type: 'string', description: 'La ruta tal como la escribió el usuario' } }, required: ['ruta'] } },
   { name: 'estudiar_ejemplos', description: 'Estudia (o actualiza) la carpeta de ejemplos del perfil para aprender de los documentos ya completados. Usala si el usuario lo pide o si dice que agregó ejemplos.',
-    input_schema: { type: 'object', properties: {} } }
+    input_schema: { type: 'object', properties: {} } },
+  { name: 'revisar_planilla', description: 'Revisa la planilla mensual de asistencia abierta (filas Nro con Fecha, Hora de Inicio, Hora de Finalización, Kilómetros y Firma). Devuelve el horario que tiene cada día de la semana, los km y lo que no cierra: días de fin de semana o feriados, horarios distintos al resto de ese día, km o firma que faltan, fechas repetidas. Usala cuando pida revisar, controlar o corregir una planilla, y antes de armar otro mes.',
+    input_schema: { type: 'object', properties: { feriados: { type: 'array', items: { type: 'integer' }, description: 'Días del mes de la planilla que fueron feriado (para avisar si alguno tiene viaje).' } } } },
+  { name: 'armar_planilla', description: 'Arma la planilla de otro mes (o rehace la del mismo mes corregida) a partir de la planilla abierta: cambia el período del encabezado, pone los días hábiles en orden (sin sábados, domingos, feriados ni los días sin servicio), el horario de cada día, los km y la firma del usuario en cada fila, y deja vacías las filas que sobran. El resultado se abre en una pestaña nueva para que el usuario lo revise y lo guarde. Usala solo después de confirmar con el usuario los feriados y los días sin servicio.',
+    input_schema: { type: 'object', properties: {
+      mes: { type: 'string', description: 'Mes a armar, AAAA-MM (por ejemplo 2026-11).' },
+      feriados: { type: 'array', items: { type: 'integer' }, description: 'Días del mes que son feriado donde se presta el servicio.' },
+      sin_servicio: { type: 'array', items: { type: 'integer' }, description: 'Días hábiles en que no hubo servicio (faltas, vacaciones).' },
+      horario: { type: 'string', description: 'Solo si cambia lo que ya tiene la planilla. Por grupo de hojas, separados por |, por ejemplo "1-2:lun-jue=8:30-10:50;vie=8:30-9:50|3-4:lun-vie=12:40-17:40".' },
+      km: { type: 'string', description: 'Solo si cambian. Por grupo de hojas, por ejemplo "1-2=19.2KM;3-4=12km".' },
+      sin_firma: { type: 'boolean', description: 'true para dejar las filas sin la firma del usuario.' } }, required: ['mes', 'feriados'] } }
 ];
-const SISTEMA_CHARLA = `${PERSONALIDAD}
+// Planillas mensuales (lo mismo que dice la skill del repositorio .claude/skills/planillas-mensuales)
+const REGLAS_PLANILLAS = `
+
+Planillas mensuales de asistencia (transporte, terapias, escuela): podés revisarlas (revisar_planilla) y armar la de otro mes o corregir la del mismo mes (armar_planilla) a partir de la planilla abierta.
+- Es una declaración jurada: las fechas tienen que ser días en que el servicio se hizo de verdad. Antes de armar, preguntá si hubo días sin servicio (faltas, vacaciones) y, si el mes todavía no terminó, decí que conviene armarla a fin de mes.
+- Feriados: buscalos (si tenés búsqueda en internet, en fuentes oficiales o diarios, y decí de dónde) para la provincia de las direcciones de la planilla; ojo con los que se trasladan y los que rigen solo en algunas provincias. Confirmalos con el usuario antes de armar.
+- La firma de cada fila es la del usuario: va solo si él está de acuerdo. Nunca copies firmas ni sellos de otras personas (terapeutas, escuela, transportista) a un mes que no firmaron: avisale que se los tienen que poner ellos.
+- Si la planilla tiene un horario mal en algún día (revisar_planilla te lo dice), pasá el horario correcto en horario al armar.
+- Después de armar, contale en pocas líneas cuántos días quedaron, qué feriados sacaste, qué firmas faltan y lo que avisó el control, y pedile que la revise en la pestaña nueva antes de guardarla.`;
+const SISTEMA_CHARLA = `${PERSONALIDAD}${REGLAS_PLANILLAS}
 
 Podés ver imágenes y PDF que el usuario te pasa. Cuando te pase algo para que aprendas (un ejemplo completo, una autorización, una regla), miralo con atención y guardá lo importante con guardar_aprendizaje (puede ser varias reglas). Cuando pida completar o firmar el documento abierto, usá completar_documento. Si pide corregir la vista previa (tamaño, lugar, valores), volvé a usar completar_documento con la corrección exacta en indicaciones: el programa le pasa la propuesta anterior y las medidas reales, y la corrección se aplica. Usá lo aprendido y los ejemplos del perfil para responder. Respondé corto.`;
 function aBloques(m, conAdjuntos) {
@@ -452,12 +478,20 @@ async function charlar({ historial, documento, perfil }) {
   });
   const acciones = [], aprendidos = [];
   let costo = 0, texto = '';
-  for (let vuelta = 0; vuelta < 5; vuelta++) {
-    const r = await llamar({ model: modeloPara(false), max_tokens: 4000, system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
-      messages: mensajes, tools: HERRAMIENTAS, output_config: { effort: 'low' } }, `charla (vuelta ${vuelta + 1})`);
+  // con Claude, además, búsqueda en internet (feriados, trámites); si la cuenta no la tiene habilitada, se sigue sin ella
+  const modelo = modeloPara(false);
+  let buscar = !esGemini(modelo) && !leerDatos().sinBusqueda;
+  const busqueda = () => [{ type: /haiku/.test(modelo) ? 'web_search_20250305' : 'web_search_20260209', name: 'web_search', max_uses: 3 }];
+  for (let vuelta = 0; vuelta < 8; vuelta++) {
+    const pedido = { model: modelo, max_tokens: 4000, system: [{ type: 'text', text: sistema, cache_control: { type: 'ephemeral' } }],
+      messages: mensajes, tools: [...HERRAMIENTAS, ...(buscar ? busqueda() : [])], output_config: { effort: 'low' } };
+    let r;
+    try { r = await llamar(pedido, `charla (vuelta ${vuelta + 1})`); }
+    catch (e) { if (buscar && /web_search|server tool|tool type/i.test(String(e?.message))) { buscar = false; guardarDatos({ sinBusqueda: true }); vuelta--; continue; } throw e; }
     costo += r.costo;
     if (r.stop_reason === 'refusal') return { rechazo: true, costo };
     texto = r.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim() || texto;
+    if (r.stop_reason === 'pause_turn') { mensajes.push({ role: 'assistant', content: r.content }); continue; } // la búsqueda sigue
     if (r.stop_reason !== 'tool_use') break;
     mensajes.push({ role: 'assistant', content: r.content });
     const resultados = [];
@@ -475,11 +509,33 @@ async function charlar({ historial, documento, perfil }) {
         else { p.ejemplosExtra = [...new Set([...(p.ejemplosExtra || []), ruta])]; guardarDatos({ perfiles: d.perfiles }); acciones.push({ tipo: 'estudiar' }); res = 'Agregada a los ejemplos del perfil; se empieza a estudiar.'; }
       }
       else if (b.name === 'estudiar_ejemplos') { acciones.push({ tipo: 'estudiar' }); res = 'Se empieza a estudiar la carpeta; tarda un rato.'; }
+      else if (b.name === 'revisar_planilla' || b.name === 'armar_planilla') res = await planilla(b, documento, acciones);
       resultados.push({ type: 'tool_result', tool_use_id: b.id, content: res });
     }
     mensajes.push({ role: 'user', content: resultados });
   }
   return { texto, costo, acciones, aprendidos };
+}
+
+// Las dos herramientas de planillas: corren en el motor de PDF con los bytes del documento abierto
+async function planilla(b, documento, acciones) {
+  if (!documento?.datos) return 'No hay ningún PDF abierto: pedile que abra la planilla.';
+  if (!motorPdf) return 'Esta herramienta no está disponible ahora.';
+  const lista = v => (Array.isArray(v) ? v : []).map(Number).filter(n => n >= 1 && n <= 31);
+  try {
+    if (b.name === 'revisar_planilla') {
+      const r = await motorPdf.llamar('planilla-revisar', [documento.datos, lista(b.input?.feriados)]);
+      return [...r.resumen, r.avisos.length ? 'Para revisar:\n- ' + r.avisos.join('\n- ') : 'Todo en orden.'].join('\n');
+    }
+    const i = b.input || {}, op = { mes: String(i.mes || ''), feriados: lista(i.feriados), sin: lista(i.sin_servicio), horario: i.horario || undefined, km: i.km || undefined, sinFirma: !!i.sin_firma };
+    const r = await motorPdf.llamar('planilla-armar', [documento.datos, op], { tiempo: 180000 });
+    const [a, m] = op.mes.split('-').map(Number), MESES = require('./herramientas/planillas/planilla.cjs').MESES;
+    const nombre = `${String(documento.nombre || 'Planilla').replace(/\.pdf$/i, '')} - ${MESES[m - 1][0] + MESES[m - 1].slice(1).toLowerCase()} ${a}.pdf`;
+    acciones.push({ tipo: 'abrir-pdf', nombre, datos: r.datos });
+    const filas = r.informe.filter(l => !/^ {2}Nro/.test(l));
+    return [`Lista: se abrió "${nombre}" en una pestaña nueva (todavía sin guardar).`, ...filas,
+      r.control.length ? 'El control encontró:\n- ' + r.control.join('\n- ') : 'Control de la planilla nueva: todo en orden.'].join('\n');
+  } catch (e) { return 'No se pudo: ' + (e?.message || e); }
 }
 
 // ---------- Completar viendo la página ----------
@@ -579,8 +635,10 @@ function reglasUsuario() {
   if (textos.length) r.push('No cambies estos textos: ' + textos.map(t => `"${t}"`).join(', ') + '.');
   return r.length ? '\n\nReglas del usuario (respetalas siempre):\n- ' + r.join('\n- ') : '';
 }
-function registrar(ipcMain, prefs) {
+let motorPdf = null; // el motor de PDF del programa (MuPDF en un proceso aparte): lo usan las planillas
+function registrar(ipcMain, prefs, motor) {
   if (prefs) leerPrefs = prefs;
+  if (motor) motorPdf = motor;
   const envolver = fn => async (...args) => { try { return { ok: true, ...(await fn(...args)) }; } catch (e) { console.error('Asistente', e?.message); return { ok: false, error: explicar(e) }; } };
   ipcMain.handle('asistente-estado', () => ({ tieneClave: (proveedor() === 'gemini' ? !!leerClaveGemini() : !!leerClave()) || !!process.env.PDFPRO_COMPLETAR_FALSO, tieneGemini: !!leerClaveGemini(), tieneClaude: !!leerClave(), gasto: gastoDelMes(), tope: leerDatos().tope }));
   // Claude: una clave de Gemini (AIza…) pegada acá no se guarda: se avisa

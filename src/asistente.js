@@ -71,7 +71,7 @@ export class Mascota {
         el('button', { class: 'btn-icono', title: 'Cerrar', onclick: () => this.alternar(false) }, '✕')),
       this.mensajes,
       el('div', { class: 'mascota-acciones' }, accion('Completar este documento', () => this.completar()), accion('¿Qué es esto?', () => this.enviar('¿Qué documento es este? Decímelo en dos frases.')),
-        accion('Resumir', () => this.enviar('Resumime este documento en pocas frases.')), accion('Estudiar ejemplos', () => this.estudiar())),
+        accion('Resumir', () => this.enviar('Resumime este documento en pocas frases.')), accion('Planilla del mes que viene', () => this.enviar('Quiero pasar esta planilla al mes que viene. Revisala primero.')), accion('Estudiar ejemplos', () => this.estudiar())),
       this.chips = el('div', { class: 'mascota-adjuntos', hidden: true }),
       el('div', { class: 'mascota-escribir' },
         el('button', { class: 'btn-icono', title: 'Adjuntar imágenes o PDF (también podés arrastrarlos o pegarlos acá)', html: icono.clip, onclick: async () => (await this.ctx.api.asistenteElegirAdjuntos()).forEach(a => this.adjuntar(a.datos, a.nombre, a.tipo, false)) }),
@@ -297,7 +297,8 @@ export class Mascota {
     this.historial.push({ rol: 'yo', texto, adjuntos });
     const pensando = this.decir('Pensando…'); this.estado('pensando');
     let hist = this.historial.slice(-12); while (hist.length && hist[0].rol !== 'yo') hist = hist.slice(1); // Claude necesita que empiece el usuario
-    const r = await this.ctx.api.asistenteCharlar({ historial: hist, perfil: p?.perfil || '', documento: p?.visor?.doc ? { nombre: p.nombre, texto: await this.textoDocumento(p) } : null });
+    // los bytes del PDF van para las herramientas que trabajan con el archivo (planillas); a la IA solo le llega el texto
+    const r = await this.ctx.api.asistenteCharlar({ historial: hist, perfil: p?.perfil || '', documento: p?.visor?.doc ? { nombre: p.nombre, texto: await this.textoDocumento(p), datos: p.datos } : null });
     pensando.remove(); this.estado();
     if (!r.ok) { this.historial.pop(); return this.decir(r.error, { extra: this.botonClave(r.error) }); }
     const respuesta = r.rechazo ? 'Eso no lo puedo responder.' : r.texto || 'Listo.';
@@ -306,6 +307,7 @@ export class Mascota {
     for (const a of r.acciones || []) {
       if (a.tipo === 'completar') this.completar(a.indicaciones);
       if (a.tipo === 'estudiar') this.estudiar(p?.perfil);
+      if (a.tipo === 'abrir-pdf') await this.ctx.abrirPdf?.(a.datos, a.nombre);
     }
   }
   botonClave(error) {
