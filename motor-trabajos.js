@@ -149,7 +149,16 @@ ipcMain.handle('pagina-contenido', async (_e, datos, n) => {
 // Letras que no se ven: invisibles (salvo el texto reconocido sobre un escaneo) o tapadas por algo opaco dibujado
 // después (un recuadro blanco encima de un dato viejo). Se recorre la página en orden y se anota quién va arriba.
 async function letrasOcultas(pg) {
-  const m = await mu(), glifos = new Map(), tapas = [], imagenes = [];
+  const m = await mu(), glifos = new Map(), tapas = [], imagenes = [], bordes = [];
+  const raya = r => { if (r[2] - r[0] < 2.5 && r[3] - r[1] > 6) bordes.push(r); };
+  // cada figura suelta de un dibujo (desde cada moveTo), con su caja en coordenadas de la hoja
+  const pedazos = (p, ctm) => {
+    const out = []; let caja = null;
+    const punto = (x, y) => { const [a, b] = transformar(ctm, x, y); if (!caja) caja = [a, b, a, b]; else { caja[0] = Math.min(caja[0], a); caja[1] = Math.min(caja[1], b); caja[2] = Math.max(caja[2], a); caja[3] = Math.max(caja[3], b); } };
+    p.walk({ moveTo(x, y) { if (caja) out.push(caja); caja = null; punto(x, y); }, lineTo: punto, curveTo(x1, y1, x2, y2, x3, y3) { punto(x1, y1); punto(x2, y2); punto(x3, y3); }, closePath() {} });
+    if (caja) out.push(caja);
+    return out;
+  };
   let orden = 0, raro = 0;
   const clave = (x, y, u) => Math.round(x * 2) + '|' + Math.round(y * 2) + '|' + u;
   const anotar = (t, ctm, visible) => {
@@ -164,22 +173,27 @@ async function letrasOcultas(pg) {
       clipText(t, ctm) { anotar(t, ctm, false); },
       clipStrokeText(t, _s, ctm) { anotar(t, ctm, false); },
       ignoreText(t, ctm) { anotar(t, ctm, false); },
-      fillPath(p, _eo, ctm, _cs, _c, alpha) { if (!raro && alpha > 0.99) tapas.push({ o: orden++, r: p.getBounds(null, ctm) }); },
+      // solo tapa un relleno de una sola figura (un recuadro): Word dibuja todos los bordes de una tabla como UNA figura
+      // de muchos pedacitos, y su caja (la tabla entera) no tapa nada. Cada pedacito fino y vertical es un borde de celda.
+      fillPath(p, _eo, ctm, _cs, _c, alpha) { const partes = pedazos(p, ctm); partes.forEach(raya); if (!raro && alpha > 0.99 && partes.length === 1) tapas.push({ o: orden++, r: partes[0] }); },
+      strokePath(p, st, ctm) { const w = (st?.getLineWidth?.() || 1) / 2; pedazos(p, ctm).forEach(r => raya([r[0] - w, r[1] - w, r[2] + w, r[3] + w])); },
       fillImage(_i, ctm) { imagenes.push({ o: orden++, r: caja(ctm) }); },
       beginGroup(_a, _cs, _iso, _ko, modo, alpha) { if (raro || modo !== 'Normal' || alpha < 0.99) raro++; },
       endGroup() { if (raro) raro--; },
       beginMask() { raro++; }, endMask() { if (raro) raro--; }
     });
     pg.run(dev, m.Matrix.identity); dev.close();
-  } catch (e) { console.error('letrasOcultas', e); return () => false; }
+  } catch (e) { console.error('letrasOcultas', e); return Object.assign(() => false, { bordes: [] }); }
   const dentro = (r, x, y) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3];
-  return (o, c, tam = 10) => {
+  const oculta = (o, c, tam = 10) => {
     // la misma letra en el mismo lugar dos veces (dato viejo tapado y el nuevo encima): se toman en el orden en que se dibujaron
     const g = glifos.get(clave(o[0], o[1], c.codePointAt(0)))?.shift();
     if (!g) return false;
     if (!g.visible && !imagenes.some(im => im.o < g.o && dentro(im.r, o[0], o[1]))) return true;
     return tapas.some(t => t.o > g.o && dentro(t.r, o[0] + tam * 0.2, o[1] - tam * 0.3));
   };
+  oculta.bordes = bordes; // rayas verticales finas (bordes de celdas), para saber si un renglón está pegado a una
+  return oculta;
 }
 // Letra de código de barras (o un texto con su forma: #.123.456.#, *ABC123*): es un dibujo, no se edita
 const esBarras = (f, t) => /bar ?code|code ?(39|93|128)|3 ?of ?9|idautomat|i2of5|interleaved|ean-?13|upc-?a|postnet|datamatrix|pdf417|qr ?code|(^|\+)c(39|128)/i.test(f)
@@ -299,7 +313,8 @@ ipcMain.handle('pagina-parrafos', async (_e, datos, n) => {
       else if (L.length >= 2 && rango(izq) < tol) alineacion = 'izq';
       else if (L.length >= 2 && rango(L.map(x => x.x1)) < tol) alineacion = 'der';
       else if (L.length >= 2 && rango(L.map(x => (x.x0 + x.x1) / 2)) < tol) alineacion = 'centro';
-      else if (L.length === 1 && a.x0 > margenIzq + 20 && [anchoP / 2, (margenIzq + margenDer) / 2].some(c => Math.abs((a.x0 + a.x1) / 2 - c) < 10)) alineacion = 'centro';
+      // un renglón pegado al borde izquierdo de una celda está alineado a la izquierda aunque caiga en el centro de la hoja
+      else if (L.length === 1 && !oculta.bordes.some(r => r[2] <= a.x0 + 0.5 && a.x0 - r[2] < 12 && r[1] < a.y1 && r[3] > a.y0) && a.x0 > margenIzq + 20 && [anchoP / 2, (margenIzq + margenDer) / 2].some(c => Math.abs((a.x0 + a.x1) / 2 - c) < 10)) alineacion = 'centro';
       else if (L.length === 1 && a.x0 > anchoP * 0.4 && Math.abs(a.x1 - margenDer) < 6) alineacion = 'der';
       const x0 = Math.min(...L.map(x => x.x0)), x1 = Math.max(...L.map(x => x.x1));
       // ancho disponible: un renglón solo puede crecer hasta el margen (o hasta lo que tenga al lado en el mismo renglón)
@@ -348,17 +363,32 @@ function leerToUnicode(txt) {
 }
 function fuenteOriginal(pdf, n, nombre) {
   const sin = x => String(x || '').replace(/^[A-Z]{6}\+/, '');
-  const pagina = pdf.findPage(n - 1), fuentes = pagina.getInheritable('Resources').get('Font');
-  if (!fuentes || fuentes.isNull()) return null;
+  const pagina = pdf.findPage(n - 1), recursos = pagina.getInheritable('Resources');
   let hallada = null;
-  fuentes.forEach((v, k) => { if (!hallada) { const f = v.resolve(), b = f.get('BaseFont'); if (b && !b.isNull() && (b.asName() === nombre || sin(b.asName()) === sin(nombre))) hallada = { recurso: String(k), obj: v, f }; } });
+  // primero el nombre exacto (con su prefijo de subconjunto: dos "Arial" recortadas distintas no son la misma letra)
+  let exacto = true;
+  const buscar = (fuentes, propio) => { if (fuentes && !fuentes.isNull()) fuentes.forEach((v, k) => { if (!hallada) { const f = v.resolve(), b = f.get('BaseFont'); if (b && !b.isNull() && (b.asName() === nombre || (!exacto && sin(b.asName()) === sin(nombre)))) hallada = { recurso: propio ? String(k) : 'PDFPro' + (v.isIndirect() ? v.asIndirect() : k), obj: v, f }; } }); };
+  // a veces la letra no está en la hoja sino adentro de un dibujo (Form XObject) de la hoja: se usa ese mismo objeto con
+  // un nombre propio (escribir-original lo engancha a la hoja por su número)
+  const enDibujos = (res, prof) => { const xo = res?.get?.('XObject'); if (!xo || xo.isNull() || prof > 3) return; xo.forEach(v => { if (hallada) return; const o = v.resolve(); if (o.get('Subtype')?.asName?.() === 'Form') { const r = o.get('Resources'); if (r && !r.isNull()) { buscar(r.get('Font'), false); enDibujos(r, prof + 1); } } }); };
+  for (const e of [true, false]) { exacto = e; if (hallada) break; buscar(recursos?.get('Font'), true); if (!hallada) enDibujos(recursos, 0); }
   if (!hallada) return null;
+  if (hallada.recurso.startsWith('PDFPro') && !hallada.obj.isIndirect()) return null; // fuera de la hoja solo sirve si tiene número
   const { f } = hallada, tipo = f.get('Subtype').asName(), dosBytes = tipo === 'Type0';
   if (dosBytes && !/Identity-H/.test(f.get('Encoding')?.asName?.() || '')) return null;
   if (tipo === 'Type3') return null;
-  const tu = f.get('ToUnicode');
-  if (!tu || tu.isNull()) return null;
-  const codigos = leerToUnicode(tu.readStream().asString?.() ?? Buffer.from(tu.readStream().asUint8Array()).toString('latin1'));
+  const tu = f.get('ToUnicode'), cod = f.get('Encoding')?.asName?.() || '';
+  let codigos;
+  if (tu && !tu.isNull()) codigos = leerToUnicode(tu.readStream().asString?.() ?? Buffer.from(tu.readStream().asUint8Array()).toString('latin1'));
+  // fuente simple sin tabla propia pero con la codificación estándar de Windows: cada letra común es su propio código
+  else if (!dosBytes && /WinAnsi|Standard/.test(cod) && !f.get('Encoding').isDictionary?.()) {
+    // ojo: casi siempre viene recortada (solo las letras que se usaron). Se ofrecen solo las letras que de verdad
+    // aparecen escritas con ella en el documento; las demás, quien llama las escribe con otra
+    const usadas = new Set(), nb = f.get('BaseFont').asName();
+    for (let k = 0; k < Math.min(pdf.countPages(), 12); k++) pdf.loadPage(k).toStructuredText().walk({ onChar(ch, _o, fo) { if (fo.getName() === nb || sin(fo.getName()) === sin(nb) && fo.getName().length === nb.length) usadas.add(ch); } });
+    codigos = new Map();
+    for (let c = 32; c < 256; c++) if ((c < 127 || c >= 160) && (c === 32 || usadas.has(String.fromCharCode(c)))) codigos.set(c.toString(16).toUpperCase().padStart(2, '0'), String.fromCharCode(c));
+  } else return null;
   const anchos = {};
   if (dosBytes) {
     const df = f.get('DescendantFonts').resolve().get(0).resolve(), dw = df.get('DW')?.isNumber?.() ? df.get('DW').asNumber() : 1000, W = df.get('W');
@@ -420,12 +450,121 @@ ipcMain.handle('escribir-original', async (_e, datos, n, fuenteComun, entradas) 
 });
 // Fondo para el modo documento: la página dibujada sin el texto que se está editando (quedan imágenes, líneas, tablas
 // y el texto que no se edita). Las zonas son tiras dentro de cada renglón editable, en puntos del PDF.
+// MuPDF, al borrar texto, reescribe el contenido de la hoja. En algunos PDF (hechos con Word, con el modo de dibujo
+// del texto heredado de un bloque a otro) lo pierde y el resto del texto sale con contorno: más grueso, como negrita.
+// Se cuenta el texto con contorno antes y después; si aparece más, en vez de reescribir la hoja se tapan las letras
+// de esas zonas con el color del papel (el texto viejo queda escondido debajo; pdf.pro ya no lo muestra ni lo lee).
+function textoConContorno(m, pg) {
+  let n = 0;
+  const dev = new m.Device({ strokeText() { n++; }, clipStrokeText() { n++; } });
+  pg.run(dev, m.Matrix.identity); dev.close();
+  return n;
+}
+function agregarContenido(pdf, n, ops) {
+  const pagina = pdf.findPage(n - 1), antes = pagina.get('Contents'), lista = pdf.newArray();
+  lista.push(pdf.addStream('q\n', pdf.newDictionary()));
+  if (antes && !antes.isNull()) { const a = antes.resolve(); if (a.isArray()) a.forEach(x => lista.push(x)); else lista.push(antes); }
+  lista.push(pdf.addStream('Q\nq\n' + ops.join('\n') + '\nQ\n', pdf.newDictionary()));
+  pagina.put('Contents', lista);
+}
+// zonasMu: rects en coordenadas de MuPDF. Tapa justo las letras que caen adentro (su caja entera, no solo la zona)
+function taparLetras(m, pdf, pg, n, zonasMu) {
+  const cajas = zonasMu.map(() => null);
+  // la caja de la tinta (de la base hacia arriba lo alto de una mayúscula, hacia abajo lo que baja una "p"), no la
+  // de la letra entera: así no tapa el borde de la celda que pasa justo abajo
+  pg.toStructuredText('preserve-whitespace').walk({ onChar(c, o, _f, s, q) {
+    if (!c.trim()) return;
+    const b = [Math.min(q[0], q[4]), o[1] - s * 0.8, Math.max(q[2], q[6]), o[1] + s * (/[gjpqyQç,;()[\]{}|]/.test(c) ? 0.24 : 0.05)], cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+    zonasMu.forEach((z, i) => { if (cx >= z[0] && cx <= z[2] && cy >= z[1] && cy <= z[3]) { const a = cajas[i]; cajas[i] = a ? [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])] : b; } });
+  } });
+  const usar = cajas.filter(Boolean).map(b => [b[0] - 0.5, b[1] - 0.3, b[2] + 0.5, b[3] + 0.15]);
+  if (!usar.length) return;
+  const papel = colorAlrededor(m, pg, usar), inv = invertir(pg.getTransform()), r3 = v => Math.round(v * 1000) / 1000;
+  agregarContenido(pdf, n, usar.map((r, i) => { const [a, b, c, d] = rectCon(inv, ...r); return `${(papel[i] || [255, 255, 255]).map(v => (v / 255).toFixed(3)).join(' ')} rg ${r3(a)} ${r3(b)} ${r3(c - a)} ${r3(d - b)} re f`; }));
+}
+// Borra el texto de esas zonas (rects en coordenadas de MuPDF) en la página; si MuPDF engrosa el resto, devuelve false
+// y no sirve esa copia (quien llama usa taparLetras sobre una copia nueva)
+function borrarTexto(m, pg, zonasMu, pdf, n) {
+  const antes = trazosDeTexto(m, pg);
+  for (const r of zonasMu) pg.createAnnotation('Redact').setRect(r);
+  pg.applyRedactions(false, m.PDFPage.REDACT_IMAGE_NONE, m.PDFPage.REDACT_LINE_ART_NONE, m.PDFPage.REDACT_TEXT_REMOVE);
+  return pdf ? repararContorno(m, pdf, n, antes) : textoConContorno(m, pg) <= antes.length;
+}
+// Dónde empieza cada texto dibujado con contorno (coordenadas de MuPDF)
+function trazosDeTexto(m, pg) {
+  const out = [];
+  const dev = new m.Device({ strokeText(t, _s, ctm) { let p = null; t.walk({ showGlyph(_f, trm) { p ||= transformar(ctm, trm[4], trm[5]); } }); if (p) out.push(p); } });
+  pg.run(dev, m.Matrix.identity); dev.close();
+  return out;
+}
+// Arreglo del error de MuPDF (ver arriba): después de reescribir la hoja, los textos que antes NO tenían contorno y
+// ahora sí vuelven a su modo normal (0 Tr al empezar su bloque BT y, al terminar, el modo que seguía por la regla del
+// PDF). Así no hace falta tapar nada. Devuelve si quedó igual que antes.
+function repararContorno(m, pdf, n, antes) {
+  const pg0 = pdf.loadPage(n - 1), cerca = (a, b) => Math.abs(a[0] - b[0]) < 0.6 && Math.abs(a[1] - b[1]) < 0.6;
+  const nuevos = trazosDeTexto(m, pg0).filter(p => !antes.some(q => cerca(p, q)));
+  if (!nuevos.length) return true;
+  const pagina = pdf.findPage(n - 1), c = pagina.get('Contents');
+  // (los pedazos que apuntan a objetos que no existen, como en algunos PDF rotos, se saltean: MuPDF tampoco los dibuja;
+  // un stream solo se reconoce por su referencia, no resuelto)
+  const partes = (c.resolve().isArray() ? Array.from({ length: c.resolve().length }, (_, i) => c.resolve().get(i)) : [c]).filter(p => p.isStream());
+  const leer = p => Buffer.from(p.readStream().asUint8Array()).toString('latin1');
+  const txt = partes.map(leer).join('\n');
+  const T = pg0.getTransform(), mul = ([a, b, c2, d, e, f], [A, B, C, D, E, F]) => [a * A + b * C, a * B + b * D, c2 * A + d * C, c2 * B + d * D, e * A + f * C + E, e * B + f * D + F];
+  // recorrer el contenido: q/Q/cm, bloques BT…ET, matriz de texto y modo de texto (Tr). Cada texto que quedó con
+  // contorno y antes no lo tenía se envuelve en "0 Tr … <modo que seguía> Tr" (MuPDF escribe el "2 Tr" adentro del
+  // mismo bloque, así que se arregla texto por texto)
+  let ctm = [1, 0, 0, 1, 0, 0], tr = 0, pila = [], nums = [], enBT = false, tm = null, tlm = null, lead = 0, finOp = 0;
+  const arreglos = [];
+  for (let i = 0; i < txt.length;) {
+    const ch = txt[i];
+    if (/\s/.test(ch)) { i++; continue; }
+    if (ch === '%') { while (i < txt.length && txt[i] !== '\n' && txt[i] !== '\r') i++; continue; }
+    if (ch === '(') { let prof = 0; for (; i < txt.length; i++) { if (txt[i] === '\\') { i++; continue; } if (txt[i] === '(') prof++; else if (txt[i] === ')' && --prof === 0) { i++; break; } } continue; }
+    if (ch === '<' && txt[i + 1] !== '<') { i = txt.indexOf('>', i) + 1; continue; }
+    if (ch === '<' || ch === '>') { i += 2; continue; }
+    if (ch === '[' || ch === ']' || ch === '{' || ch === '}') { i++; continue; }
+    if (ch === '/') { i++; while (i < txt.length && !/[\s/\[\]<>(){}%]/.test(txt[i])) i++; continue; }
+    const ini = i;
+    while (i < txt.length && !/[\s/\[\]<>(){}%]/.test(txt[i])) i++;
+    const tok = txt.slice(ini, i);
+    if (/^[-+.\d]+$/.test(tok)) { nums.push(+tok); continue; }
+    const mostrar = () => { const p = transformar(T, ...transformar(ctm, tm[4], tm[5])); if (tr !== 0 && nuevos.some(q => cerca(p, q))) arreglos.push({ ini: finOp, fin: i, tr }); };
+    switch (tok) {
+      case 'q': pila.push({ ctm, tr }); break;
+      case 'Q': ({ ctm, tr } = pila.pop() || { ctm, tr }); break;
+      case 'cm': if (nums.length >= 6) ctm = mul(nums.slice(-6), ctm); break;
+      case 'Tr': if (nums.length) tr = nums.at(-1); break;
+      case 'BT': enBT = true; tm = tlm = [1, 0, 0, 1, 0, 0]; break;
+      case 'ET': enBT = false; break;
+      case 'Tm': if (nums.length >= 6) tm = tlm = nums.slice(-6); break;
+      case 'Td': case 'TD': if (nums.length >= 2) { if (tok === 'TD') lead = -nums.at(-1); tm = tlm = mul([1, 0, 0, 1, nums.at(-2), nums.at(-1)], tlm); } break;
+      case 'TL': if (nums.length) lead = nums.at(-1); break;
+      case 'T*': tm = tlm = mul([1, 0, 0, 1, 0, -lead], tlm); break;
+      case "'": case '"': tm = tlm = mul([1, 0, 0, 1, 0, -lead], tlm); if (enBT) mostrar(); break;
+      case 'Tj': case 'TJ': if (enBT) mostrar(); break;
+      // un dibujo (Form) hereda el modo de texto de la hoja: si después de reescribir le llega un contorno que antes
+      // no tenía, sus textos salen gruesos. Se lo llama con el modo normal (si eso no explica lo nuevo, el control de
+      // abajo lo detecta y se tapa en vez de arreglar)
+      case 'Do': if (tr !== 0) arreglos.push({ ini: finOp, fin: i, tr }); break;
+    }
+    nums = []; finOp = i;
+  }
+  if (!arreglos.length) return false;
+  let nuevo = '', desde = 0;
+  for (const a of arreglos) nuevo += txt.slice(desde, a.ini) + ' 0 Tr' + txt.slice(a.ini, a.fin) + ` ${a.tr} Tr`, desde = a.fin;
+  nuevo += txt.slice(desde);
+  pagina.put('Contents', pdf.addStream(Buffer.from(nuevo, 'latin1'), pdf.newDictionary()));
+  return trazosDeTexto(m, pdf.loadPage(n - 1)).filter(p => !antes.some(q => cerca(p, q))).length === 0;
+}
 ipcMain.handle('pagina-fondo', async (_e, datos, n, zonas, escala) => {
-  const d = await abrirMu(datos);
+  let d = await abrirMu(datos);
   try {
-    const m = await mu(), pdf = d.asPDF(), pg = pdf.loadPage(n - 1), M = pg.getTransform();
-    for (const r of zonas) pg.createAnnotation('Redact').setRect(rectCon(M, ...r));
-    if (zonas.length) pg.applyRedactions(false, m.PDFPage.REDACT_IMAGE_NONE, m.PDFPage.REDACT_LINE_ART_NONE, m.PDFPage.REDACT_TEXT_REMOVE);
+    const m = await mu();
+    let pdf = d.asPDF(), pg = pdf.loadPage(n - 1);
+    const Z = zonas.map(r => rectCon(pg.getTransform(), ...r));
+    if (Z.length && !borrarTexto(m, pg, Z, pdf, n)) { d.destroy(); d = await abrirMu(datos); pdf = d.asPDF(); pg = pdf.loadPage(n - 1); taparLetras(m, pdf, pg, n, Z); }
+    pg = pdf.loadPage(n - 1);
     const px = pg.toPixmap(m.Matrix.scale(escala, escala), m.ColorSpace.DeviceRGB, false, true);
     return px.asPNG();
   } finally { d.destroy(); }
@@ -531,9 +670,17 @@ function colorAlrededor(m, pg, rects) {
   });
 }
 ipcMain.handle('borrar-zona', async (_e, datos, n, rects, { texto = true, imagenes = false } = {}) => {
-  const d = await abrirMu(datos);
+  let d = await abrirMu(datos);
   try {
-    const m = await mu(), pdf = d.asPDF(), pg = pdf.loadPage(n - 1), M = pg.getTransform();
+    const m = await mu();
+    // solo texto (lo que hace el editor): con control de que MuPDF no engrose el resto de la hoja
+    if (texto && !imagenes) {
+      let pdf = d.asPDF(), pg = pdf.loadPage(n - 1);
+      const Z = rects.map(r => rectCon(pg.getTransform(), ...r));
+      if (!borrarTexto(m, pg, Z, pdf, n)) { d.destroy(); d = await abrirMu(datos); pdf = d.asPDF(); pg = pdf.loadPage(n - 1); taparLetras(m, pdf, pg, n, Z); }
+      return pdf.saveToBuffer('compress').asUint8Array();
+    }
+    const pdf = d.asPDF(), pg = pdf.loadPage(n - 1), M = pg.getTransform(), trazos0 = trazosDeTexto(m, pg);
     // sobre una hoja escaneada, el hueco de la imagen se rellena con el color del papel de alrededor (no queda un cuadro)
     const papel = imagenes && imagenes !== 'quitar' ? colorAlrededor(m, pg, rects.map(r => rectCon(M, ...r))) : [];
     for (const r of rects) {
@@ -550,13 +697,8 @@ ipcMain.handle('borrar-zona', async (_e, datos, n, rects, { texto = true, imagen
       pg.applyRedactions(false, m.PDFPage.REDACT_IMAGE_NONE, m.PDFPage.REDACT_LINE_ART_REMOVE_IF_COVERED, m.PDFPage.REDACT_TEXT_NONE);
     }
     const tapas = rects.map((r, i) => papel[i] && `${papel[i].map(v => (v / 255).toFixed(3)).join(' ')} rg ${Math.min(r[0], r[2])} ${Math.min(r[1], r[3])} ${Math.abs(r[2] - r[0])} ${Math.abs(r[3] - r[1])} re f`).filter(Boolean);
-    if (tapas.length) {
-      const pagina = pdf.findPage(n - 1), antes = pagina.get('Contents'), lista = pdf.newArray();
-      lista.push(pdf.addStream('q\n', pdf.newDictionary()));
-      if (antes && !antes.isNull()) { const a = antes.resolve(); if (a.isArray()) a.forEach(x => lista.push(x)); else lista.push(antes); }
-      lista.push(pdf.addStream('Q\nq\n' + tapas.join('\n') + '\nQ\n', pdf.newDictionary()));
-      pagina.put('Contents', lista);
-    }
+    repararContorno(m, pdf, n, trazos0); // el mismo error de MuPDF que al borrar texto (ver borrarTexto)
+    if (tapas.length) agregarContenido(pdf, n, tapas);
     return pdf.saveToBuffer('compress').asUint8Array();
   } finally { d.destroy(); }
 });
