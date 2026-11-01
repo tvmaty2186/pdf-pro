@@ -599,7 +599,8 @@ function aplicarPropuesta(p, textos, valores, mensaje, nuevasFirmas = []) {
   aviso(mensaje); dibujarPestanas(); actualizarSinGuardar(); if (estado.activa === p) actualizarComandos();
 }
 const mascota = new Mascota({ el, api, aviso, dialogo, pestana: () => estado.activa, cambiarComentarios, aplicarPropuesta, campos, prefs: () => estado.prefs, firmas: () => firmas.lista,
-  guardarPref: (k, v) => { estado.prefs[k] = v; return api.guardarPref(k, v); }, preferencias: () => ajustesIA() });
+  guardarPref: (k, v) => { estado.prefs[k] = v; return api.guardarPref(k, v); }, preferencias: () => ajustesIA(),
+  abrirPdf: (datos, nombre) => nuevaPestana(new Uint8Array(datos), { nombre, guardada: false }) });
 const herramientas = new Herramientas({ el, icono, aviso, comentarios, edicion, mascota, pestana: () => estado.activa, prefs: () => estado.prefs, a: {
   organizando: () => !!estado.organizador, crearDesdeImagenes: () => crearDesdeImagenes(), unirVarios: () => unirVarios(), exportar: t => exportar(t),
   officeAPdf: async () => { for (const r of (await api.elegirPdf(true)).filter(esOffice)) await abrirOffice(r); },

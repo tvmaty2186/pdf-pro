@@ -528,7 +528,7 @@ ipcMain.handle('ocr', async (_e, png) => {
 });
 
 // ---- Asistente (la mascota con Claude): ver asistente.js ----
-require('./asistente.js').registrar(ipcMain, () => prefs);
+require('./asistente.js').registrar(ipcMain, () => prefs, motor);
 // ---- IA sin internet (modelo local en un proceso aparte: ia-local.js) ----
 require('./ia-local-cliente')(errores).registrar(ipcMain);
 require('./fuentes.js').registrar(ipcMain);

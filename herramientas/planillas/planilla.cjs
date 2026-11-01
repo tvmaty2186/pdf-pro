@@ -17,11 +17,12 @@
 const fs = require('fs');
 const path = require('path');
 const raiz = path.join(__dirname, '..', '..');
-const H = new Map();
-require(path.join(raiz, 'motor-trabajos.js'))({ handle: (n, f) => H.set(n, f) });
+// los trabajos del motor se registran recién al usarlos (así este archivo también lo puede cargar el propio motor)
+let H = null;
+const trabajos = () => { if (!H) { H = new Map(); require(path.join(raiz, 'motor-trabajos.js'))({ handle: (n, f) => H.set(n, f) }); } return H; };
 // lo que devuelve MuPDF apunta a su memoria interna: se copia enseguida (si no, el próximo trabajo lo pisa)
-const motor = (n, ...a) => H.get(n)(null, ...a).then(r => r instanceof Uint8Array ? Buffer.from(r) : r);
-const { PDFDocument, PDFName, PDFOperator, PDFNumber, StandardFonts, rgb } = require(path.join(raiz, 'node_modules', 'pdf-lib'));
+const motor = (n, ...a) => trabajos().get(n)(null, ...a).then(r => r instanceof Uint8Array ? Buffer.from(r) : r);
+const { PDFDocument, PDFName, PDFOperator, PDFNumber, StandardFonts, rgb } = require('pdf-lib');
 
 const MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
@@ -98,7 +99,7 @@ const aplicar = ([a, b, c, d, e, f], x, y) => [a * x + c * y + e, b * x + d * y 
 const invertir = ([a, b, c, d, e, f]) => { const k = a * d - b * c; return [d / k, -b / k, -c / k, a / k, (c * f - d * e) / k, (b * e - a * f) / k]; };
 
 async function leerPlanilla(datos) {
-  const m = await import(path.join(raiz, 'node_modules', 'mupdf', 'dist', 'mupdf.js'));
+  const m = await import('mupdf');
   const doc = m.Document.openDocument(datos, 'application/pdf'), mu = { m, doc };
   const hojas = [];
   for (let n = 1; n <= doc.countPages(); n++) { const h = await leerHoja(datos, n, mu); if (h) hojas.push(h); }
@@ -302,8 +303,30 @@ function buscarImagen(doc, page, { w, h }) {
   return ref;
 }
 
+// Resumen corto de una planilla (para el asistente y la línea de comandos)
+function resumen(pl) {
+  return [...pl.grupos.map(g => `Hojas ${g.hojasTxt}: ${g.filas.length} filas, ${g.filas.filter(f => f.fecha).length} con fecha · horario aprendido: ${Object.entries(g.horario).map(([d, h]) => DIAS[d] + ' ' + h).join(', ') || '—'} · km: ${g.km || '—'}`),
+    'Período en el encabezado: ' + (pl.hojas.filter(h => h.periodo).map(h => `${h.n}: ${h.periodo.texto}`).join(' · ') || 'no lo encontré')];
+}
+// Para usarla desde el programa (el motor la llama): revisar y armar con los bytes del PDF
+async function revisarPdf(datos, feriados = []) {
+  const pl = await leerPlanilla(Buffer.from(datos));
+  if (!pl.grupos.length) throw new Error('No es una planilla de asistencia (no encontré las columnas Fecha, Hora de Inicio y Hora de Finalización).');
+  return { resumen: resumen(pl), avisos: revisar(pl, feriados) };
+}
+async function armarPdf(datos, op) {
+  const pl = await leerPlanilla(Buffer.from(datos));
+  if (!pl.grupos.length) throw new Error('No es una planilla de asistencia (no encontré las columnas Fecha, Hora de Inicio y Hora de Finalización).');
+  const o = { feriados: [], sin: [], ...op };
+  if (!/^\d{4}-\d{1,2}$/.test(o.mes || '')) throw new Error('Falta el mes (AAAA-MM).');
+  const { datos: nuevo, informe } = await armar(Buffer.from(datos), pl, o);
+  const control = revisar(await leerPlanilla(nuevo), o.feriados);
+  return { datos: new Uint8Array(nuevo), resumen: resumen(pl), informe, control };
+}
+module.exports = { revisarPdf, armarPdf, MESES };
+
 // ---------- Línea de comandos ----------
-(async () => {
+if (require.main === module) (async () => {
   const [cmd, entrada, ...resto] = process.argv.slice(2);
   const op = { feriados: [], sin: [] };
   for (let i = 0; i < resto.length; i++) {
@@ -314,11 +337,7 @@ function buscarImagen(doc, page, { w, h }) {
   if (!cmd || !entrada || !fs.existsSync(entrada)) { console.log('Uso: planilla.cjs revisar ENTRADA.pdf | armar ENTRADA.pdf --mes AAAA-MM --feriados d,d --salida SALIDA.pdf'); process.exit(1); }
   const datos = fs.readFileSync(entrada), pl = await leerPlanilla(datos);
   if (!pl.grupos.length) throw new Error('No encontré ninguna hoja con forma de planilla (columnas Fecha, Hora de Inicio, Hora de Finalización).');
-  for (const g of pl.grupos) {
-    console.log(`Hojas ${g.hojasTxt}: ${g.filas.length} filas, ${g.filas.filter(f => f.fecha).length} con fecha · horario aprendido: ${Object.entries(g.horario).map(([d, h]) => DIAS[d] + ' ' + h).join(', ') || '—'} · km: ${g.km || '—'}`);
-  }
-  const per = pl.hojas.filter(h => h.periodo).map(h => `${h.n}: ${h.periodo.texto}`);
-  console.log('Período en el encabezado: ' + (per.join(' · ') || 'no lo encontré'));
+  console.log(resumen(pl).join('\n'));
   if (cmd === 'revisar') {
     const avisos = revisar(pl, op.feriados);
     console.log(avisos.length ? '\nPara revisar:\n- ' + avisos.join('\n- ') : '\nTodo en orden.');

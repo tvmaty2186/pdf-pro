@@ -473,6 +473,26 @@ const casos = [
       if (r.vacio !== '' || r.bloques) return 'una imagen en blanco dio texto: ' + r.vacio;
       return null;
     }
+  },
+  {
+    // el asistente revisa la planilla abierta y arma abril (con una IA de mentira que pide las herramientas en orden)
+    nombre: 'asistente-planilla', pdf: '14-planilla.pdf', tiempo: 120000,
+    antes: () => ({ PDFPRO_CHARLA_FALSA: JSON.stringify([
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', name: 'revisar_planilla', input: {} }] },
+      { stop_reason: 'tool_use', content: [{ type: 'tool_use', name: 'armar_planilla', input: { mes: '2026-04', feriados: [2, 3] } }] },
+      { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Listo, revisala en la pestaña nueva.' }] }]) }),
+    js: `pdfproPrueba.mascota.alternar(true); await w(800);
+      await pdfproPrueba.mascota.enviar('Pasá esta planilla a abril.');
+      for (let i = 0; i < 80 && pdfproPrueba.estado.pestanas.length < 2; i++) await w(250);
+      const nueva = pdfproPrueba.estado.pestanas[1];
+      const textos = nueva ? (await window.pdfpro.paginaParrafos(nueva.datos, 1)).parrafos.flatMap(x => x.lineas.map(l => l.texto)) : [];
+      return { pestanas: pdfproPrueba.estado.pestanas.length, nombre: nueva?.nombre, abril: textos.some(t => /ABRIL 2026/.test(t)) };`,
+    revisar(r) {
+      if (r.pestanas !== 2) return 'no se abrió la planilla nueva en otra pestaña (' + r.pestanas + ')';
+      if (!/Abril 2026/.test(r.nombre || '')) return 'la pestaña nueva se llama ' + r.nombre;
+      if (!r.abril) return 'la planilla nueva no dice ABRIL 2026';
+      return null;
+    }
   }
 ];
 module.exports = casos;
