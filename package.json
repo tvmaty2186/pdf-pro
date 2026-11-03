@@ -1,7 +1,7 @@
 {
   "name": "pdf-pro",
   "productName": "PDF.Pro",
-  "version": "0.39.4",
+  "version": "0.39.5",
   "description": "Editor de PDF con asistente",
   "author": "Matías Russo",
   "main": "main.js",

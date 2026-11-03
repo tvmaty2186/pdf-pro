@@ -67,6 +67,8 @@ const casos = [
   cambiarPalabra('texto-partido', '5-partido.pdf', 'revisó', 'mostró'),
   cambiarPalabra('hoja-girada', '9-girada.pdf', 'jueves', 'martes'),
   cambiarPalabra('hoja-recortada', '10-recortada.pdf', 'jueves', 'martes'),
+  // plano de AutoCAD (letras dibujadas + texto invisible): se edita como un escaneo, tapando lo dibujado
+  cambiarPalabra('plano-autocad', '15-dibujado.pdf', 'Funcional', 'Operativo'),
   {
     nombre: 'tapado-y-codigo-de-barras', pdf: '6-tapado.pdf',
     js: `const pars = await parrafos(); return pars.map(x => [x.reflow, x.lineas.map(l => l.texto).join(' ')]);`,

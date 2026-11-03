@@ -180,7 +180,24 @@ async function recortada() {
 // Planilla mensual inventada (la misma que usa pruebas/planilla.cjs), para probar el asistente con planillas
 async function planilla() { fs.writeFileSync(path.join(dir, '14-planilla.pdf'), await require('./planilla.cjs').inventada()); }
 
+// Plano como los que exporta AutoCAD: las letras son rayas (fuentes SHX) y el texto va invisible encima, para buscar.
+// Las "letras" acá son palos de 1 punto de ancho, uno por carácter, en el lugar de cada letra del texto invisible.
+async function dibujado() {
+  const d = await PDFDocument.create(), p = d.addPage([842, 595]), h = await d.embedFont(StandardFonts.Helvetica);
+  const lineas = ['DOCUMENTACION DE REFERENCIA:', '1046-ABC-I-LI-12150 - Lista de instrumentos', '1046-ABC-R-PI-12150 - Diagrama de cañerias', '1046-ABC-I-FU-12151 - Funcional del tablero'];
+  lineas.forEach((t, i) => {
+    const y = 480 - i * 18, tam = 11;
+    let x = 500;
+    for (const c of t) { const w = h.widthOfTextAtSize(c, tam); if (c.trim()) p.drawLine({ start: { x: x + w * 0.3, y }, end: { x: x + w * 0.6, y: y + tam * 0.7 }, thickness: 0.8, color: rgb(0.3, 0.3, 0.3) }); x += w; }
+    p.pushOperators(pushGraphicsState(), setTextRenderingMode(3));
+    p.drawText(t, { x: 500, y, size: tam, font: h });
+    p.pushOperators(popGraphicsState());
+  });
+  await guardar('15-dibujado.pdf', d);
+}
+
 (async () => {
+  if (process.argv[2] === 'dibujado') { await dibujado(); return console.log('Listo'); }
   if (process.argv[2] === 'planilla') { await planilla(); return console.log('Listo'); }
   if (process.argv[2] === 'asistencia') { await asistencia(); return console.log('Listo'); }
   if (process.argv[2] === 'firmado') { await firmado(); return console.log('Listo'); }

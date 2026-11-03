@@ -146,9 +146,25 @@ ipcMain.handle('pagina-contenido', async (_e, datos, n) => {
     });
     let ocr = false;
     try { ocr = !!d.asPDF().findPage(n - 1).get('PDFProOCR')?.asBoolean?.(); } catch {}
-    return { lineas, imagenes, ocr };
+    // un escaneo con el texto reconocido por OTRO programa (no tiene la marca de pdf.pro): casi todo el texto es
+    // invisible y está sobre una imagen grande. Se trata como escaneo (al editar se tapa lo de la imagen y se escribe
+    // encima); si no, lo nuevo quedaba encimado sobre lo viejo de la imagen
+    let dibujado = false;
+    if (!ocr) { ocr = esEscaneo(await mu(), pg); dibujado = ocr && !imagenes.some(i => i.entera); } // un plano: letras de rayas finas
+    return { lineas, imagenes, ocr, dibujado };
   } finally { d.destroy(); }
 });
+function esEscaneo(m, pg) {
+  let visibles = 0, invisibles = 0;
+  const glifos = t => { let k = 0; t.walk({ showGlyph() { k++; } }); return k; };
+  const dev = new m.Device({
+    fillText(t, _c, _cs, _co, alpha) { if (alpha > 0.05) visibles += glifos(t); else invisibles += glifos(t); },
+    ignoreText(t) { invisibles += glifos(t); },
+  });
+  try { pg.run(dev, m.Matrix.identity); dev.close(); } catch { return false; }
+  // escaneo con OCR (imagen grande abajo) o plano de AutoCAD: sus letras son rayas (fuentes SHX) y el texto va invisible encima
+  return invisibles >= 30 && invisibles > visibles * 3;
+}
 // Letras que no se ven: invisibles (salvo el texto reconocido sobre un escaneo) o tapadas por algo opaco dibujado
 // después (un recuadro blanco encima de un dato viejo). Se recorre la página en orden y se anota quién va arriba.
 async function letrasOcultas(pg) {
@@ -187,12 +203,15 @@ async function letrasOcultas(pg) {
     });
     pg.run(dev, m.Matrix.identity); dev.close();
   } catch (e) { console.error('letrasOcultas', e); return Object.assign(() => false, { bordes: [] }); }
+  // una hoja donde casi todo el texto es invisible (escaneo con OCR, plano de AutoCAD) muestra ese texto: es lo que se edita
+  let vis = 0, invis = 0; for (const l of glifos.values()) for (const g of l) g.visible ? vis++ : invis++;
+  const capaInvisible = invis >= 30 && invis > vis * 3;
   const dentro = (r, x, y) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3];
   const oculta = (o, c, tam = 10) => {
     // la misma letra en el mismo lugar dos veces (dato viejo tapado y el nuevo encima): se toman en el orden en que se dibujaron
     const g = glifos.get(clave(o[0], o[1], c.codePointAt(0)))?.shift();
     if (!g) return false;
-    if (!g.visible && !imagenes.some(im => im.o < g.o && dentro(im.r, o[0], o[1]))) return true;
+    if (!g.visible && !capaInvisible && !imagenes.some(im => im.o < g.o && dentro(im.r, o[0], o[1]))) return true;
     return tapas.some(t => t.o > g.o && dentro(t.r, o[0] + tam * 0.2, o[1] - tam * 0.3));
   };
   oculta.bordes = bordes; // rayas verticales finas (bordes de celdas), para saber si un renglón está pegado a una

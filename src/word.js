@@ -46,7 +46,7 @@ export class ModoWord {
     const editables = pars.filter(x => x.reflow);
     if (!editables.length || p.visor?.rotacion) return false; // con la vista girada (Ver → Girar) se edita de a renglón
     const { el } = this.ctx;
-    const hoja = { p, n: pg.n, pg, lugar, bloques: [], cont, pars, fuentesPagina: new Map(), datosFondo: p.datos, cargando: [], escaneo: !!cont.ocr };
+    const hoja = { p, n: pg.n, pg, lugar, bloques: [], cont, pars, fuentesPagina: new Map(), datosFondo: p.datos, cargando: [], escaneo: !!cont.ocr, dibujado: !!cont.ocr && !!cont.dibujado };
     for (const x of pars) for (const l of x.lineas) for (const w of l.palabras) if (w.f && !hoja.fuentesPagina.has(w.f)) hoja.fuentesPagina.set(w.f, { b: w.b, i: w.i });
     hoja.el = el('div', { class: 'ed-hoja' });
     hoja.fondo = el('img', { class: 'ed-fondo', alt: '' });
@@ -114,8 +114,10 @@ export class ModoWord {
     const b = { id: par.id, par: structuredClone(par), dy: 0, sucio: false, ampliado: !!par.ampliable }; // angosto: ancho hasta el margen desde el principio
     if (hoja.escaneo) { // papel y tinta de verdad (lo reconocido no trae color ni letra)
       const col = this.colores(hoja.pg, hoja.lugar.rectAPdf(par.rect));
-      b.fondo = col.fondo; b.tinta = col.tinta.map(x => x * 0.8); // en un escaneo la letra se ve más gruesa: un poco más oscura se parece más
-      for (const l of b.par.lineas) for (const w of l.palabras) { w.f = null; w.color = col.tinta; }
+      // en un escaneo la letra se ve más gruesa: un poco más oscura se parece más. En un plano dibujado (AutoCAD) las letras
+      // son rayas finas: el mismo gris y sin negrita
+      b.fondo = col.fondo; b.tinta = hoja.dibujado ? col.tinta : col.tinta.map(x => x * 0.8);
+      for (const l of b.par.lineas) for (const w of l.palabras) { w.f = null; w.color = col.tinta; if (hoja.dibujado) w.b = false; }
       par = b.par;
     }
     // el bloque lleva la letra y el tamaño del párrafo: lo que se le una (o se escriba fuera de un tramo) los toma
@@ -147,6 +149,7 @@ export class ModoWord {
     // la letra del párrafo también va en el bloque (lo que se le une sin tramo propio se ve y se mide con esa)
     const dom = { f: f.name, b: f.weight === 'bold', i: f.style === 'italic', tam: f.size || 11 };
     if (hoja.escaneo) dom.f = null;
+    if (hoja.dibujado) dom.b = false;
     Object.assign(b.el.style, { fontWeight: dom.b ? 700 : 400, fontStyle: dom.i ? 'italic' : 'normal', color: aHex(b.tinta || par.color || [0, 0, 0]) });
     if (!hoja.escaneo) hoja.cargando.push(this.cssFuente(dom).then(ff => { b.el.style.fontFamily = ff; }));
     if (hoja.escaneo) { // la letra que más se parece a la del escaneo, en el tamaño justo (comparando la forma)
@@ -258,7 +261,9 @@ export class ModoWord {
     const [, baseY] = hoja.lugar.enVista(v, L.base[0], L.base[1]), base = baseY * f - y0;
     const pal = L.palabras.map(p => ({ t: p.t, x: hoja.lugar.enVista(v, p.x0, L.base[1])[0] * f - x0, ancho: (p.x1 - p.x0) * v.scale * f }));
     await this.fuentes.cargar().catch(() => {});
-    const comunes = ['Times New Roman', 'Arial', 'Calibri', 'Cambria', 'Georgia', 'Verdana', 'Tahoma', 'Garamond', 'Book Antiqua', 'Century Gothic', 'Arial Narrow', 'Courier New'];
+    const comunes = ['Times New Roman', 'Arial', 'Calibri', 'Cambria', 'Georgia', 'Verdana', 'Tahoma', 'Garamond', 'Book Antiqua', 'Century Gothic', 'Arial Narrow', 'Courier New',
+      // un plano de AutoCAD tiene letras de trazo fino: las letras finas de Windows se le parecen más
+      ...(hoja.dibujado ? ['Segoe UI Light', 'Segoe UI Semilight', 'Calibri Light', 'Bahnschrift Light', 'Bahnschrift SemiLight', 'Yu Gothic Light', 'Isocpeur', 'Isocp'] : [])];
     const candidatas = ['serif', 'sans', 'mono', ...comunes.filter(n => this.fuentes.familia(n)).map(n => 'f:' + n)];
     const lienzo2 = new OffscreenCanvas(w, h), g = lienzo2.getContext('2d', { willReadFrequently: true });
     let mejor = null;
