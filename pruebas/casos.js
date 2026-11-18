@@ -59,6 +59,7 @@ const cambiarPalabra = (nombre, pdf, viejo, nuevo) => ({
   }
 });
 
+let salidaImpresion = null; // la usa la prueba de imprimir (el PDF que sale en vez de ir a la impresora)
 const casos = [
   cambiarPalabra('simple', '1-simple.pdf', 'jueves', 'martes'),
   cambiarPalabra('fuentes-incrustadas', '2-fuentes.pdf', 'lunes', 'nunca'),
@@ -493,6 +494,32 @@ const casos = [
       if (r.pestanas !== 2) return 'no se abrió la planilla nueva en otra pestaña (' + r.pestanas + ')';
       if (!/Abril 2026/.test(r.nombre || '')) return 'la pestaña nueva se llama ' + r.nombre;
       if (!r.abril) return 'la planilla nueva no dice ABRIL 2026';
+      return null;
+    }
+  }
+  ,{
+    // imprimir: 2 páginas por hoja, hoja horizontal, orden inverso, pie (sale a PDF en vez de a la impresora)
+    nombre: 'imprimir-varias-por-hoja', pdf: '7-desborde.pdf',
+    antes: () => { salidaImpresion = require('path').join(require('os').tmpdir(), `pdfpro-impreso-${process.pid}.pdf`); require('fs').rmSync(salidaImpresion, { force: true }); return { PDFPRO_IMPRIMIR_PDF: salidaImpresion }; },
+    js: `pdfproPrueba.imprimir(); for (let i = 0; i < 40 && !document.querySelector('dialog.imprimir'); i++) await w(250); await w(1200);
+      const d = document.querySelector('dialog.imprimir'), cambiar = c => c.dispatchEvent(new Event('change', { bubbles: true }));
+      const select = t => [...d.querySelectorAll('.imp-fila')].find(f => f.textContent.startsWith(t)).querySelector('select');
+      const s = select('Por hoja'); s.value = '2'; cambiar(s);
+      const h = d.querySelector('input[name=imp-ori][value=horizontal]'); h.checked = true; cambiar(h);
+      for (const t of [/orden inverso/, /Pie con/]) { const c = [...d.querySelectorAll('.casilla')].find(x => t.test(x.textContent)).querySelector('input'); c.checked = true; cambiar(c); }
+      await w(1500);
+      const resumen = d.querySelector('.imp-resumen').textContent, nav = d.querySelector('.imp-nav').textContent;
+      const b = [...d.querySelectorAll('button')].find(x => x.textContent === 'Imprimir'); b.disabled = false; b.click();
+      for (let i = 0; i < 60 && document.querySelector('dialog.imprimir'); i++) await w(250);
+      return { resumen, nav, cerro: !document.querySelector('dialog.imprimir') };`,
+    revisar(r) {
+      if (!/2 páginas en 1 hoja · horizontal · 29,7 × 21 cm/.test(r.resumen)) return 'el resumen no dice 2 páginas en 1 hoja horizontal: ' + r.resumen;
+      if (!/páginas 2, 1/.test(r.nav)) return 'no quedó en orden inverso: ' + r.nav;
+      if (!r.cerro) return 'el diálogo no terminó de imprimir';
+      const t = require('fs').readFileSync(salidaImpresion).toString('latin1');
+      const cajas = [...t.matchAll(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)/g)].map(m => [+m[1], +m[2]]);
+      if (cajas.length !== 1) return 'esperaba 1 hoja impresa y salieron ' + cajas.length;
+      if (!(cajas[0][0] > 830 && cajas[0][0] < 850 && cajas[0][1] > 590 && cajas[0][1] < 600)) return 'la hoja impresa no es A4 horizontal: ' + cajas[0];
       return null;
     }
   }

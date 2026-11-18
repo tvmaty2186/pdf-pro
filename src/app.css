@@ -355,10 +355,13 @@ body.cuentagotas .pagina, body.cuentagotas .pagina * { cursor: crosshair !import
 .imp-cuerpo { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(330px, 1.15fr); gap: var(--esp-6); }
 .imp-previa { display: flex; flex-direction: column; gap: var(--esp-2); }
 .imp-marco { height: min(56vh, 460px); display: grid; place-items: center; background: var(--fondo-lienzo); border-radius: var(--radio-m); padding: var(--esp-4); }
-.imp-hoja { height: 100%; max-width: 100%; background: #fff; box-shadow: var(--sombra-pagina); display: grid; place-items: center; overflow: hidden; }
+.imp-hoja { max-width: 100%; max-height: 100%; background: #fff; box-shadow: var(--sombra-pagina); display: grid; place-items: center; overflow: hidden; }
 .imp-hoja img { display: block; object-fit: fill; }
 .imp-nav { display: flex; align-items: center; justify-content: center; gap: var(--esp-2); }
-.imp-opciones { display: grid; gap: var(--esp-3); align-content: start; }
+.imp-opciones { display: grid; gap: var(--esp-3); align-content: start; max-height: min(64vh, 560px); overflow-y: auto; padding-right: var(--esp-2); }
+.imp-titulo { margin: var(--esp-2) 0 0; font-size: var(--texto-s); font-weight: 600; color: var(--texto); border-top: 1px solid var(--borde); padding-top: var(--esp-3); }
+.imp-resumen { margin: 0; text-align: center; }
+.imprimir .dialogo-botones { align-items: center; }
 .imp-fila { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: var(--esp-3); }
 .imp-control { display: flex; align-items: center; gap: var(--esp-3); flex-wrap: wrap; }
 .imp-control select.campo { width: 100%; text-align: left; height: 32px; }

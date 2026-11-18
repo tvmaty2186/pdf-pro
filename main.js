@@ -655,7 +655,9 @@ ipcMain.handle('papelesImpresora', async (_e, nombre) => {
   if (lista.length) papelesCache.set(nombre, lista);
   return lista;
 });
-// Recibe las hojas ya dibujadas (JPG) y las imprime desde una ventana oculta, una hoja por página del papel elegido
+// Recibe las hojas ya armadas (JPG, cada una del tamaño del papel) y las imprime desde una ventana oculta, una por hoja.
+// Hoja horizontal: el papel va con su medida de siempre (angosto × largo) y la impresora lo acuesta (landscape); la página
+// de la ventana mide largo × angosto, así cada imagen cae justa
 ipcMain.handle('imprimir', async (_e, t) => {
   const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pdfpro-imp-'));
   const mm = v => (+v).toFixed(2) + 'mm';
@@ -674,7 +676,8 @@ img { display: block }</style>${partes.join('')}`;
     await fs.promises.writeFile(path.join(dir, 'imprimir.html'), html);
     const w = new BrowserWindow({ show: false, webPreferences: { sandbox: true, javascript: false } });
     await w.loadFile(path.join(dir, 'imprimir.html'));
-    const micras = { width: Math.round(t.papel.w * 1000), height: Math.round(t.papel.h * 1000) };
+    const corto = Math.min(t.papel.w, t.papel.h), largo = Math.max(t.papel.w, t.papel.h), horizontal = t.papel.w > t.papel.h;
+    const micras = { width: Math.round(corto * 1000), height: Math.round(largo * 1000) };
     // Solo para pruebas de desarrollo: guarda en PDF en lugar de imprimir
     if (process.env.PDFPRO_IMPRIMIR_PDF) {
       fs.writeFileSync(process.env.PDFPRO_IMPRIMIR_PDF, await w.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true, margins: { marginType: 'none' } }));
@@ -683,7 +686,7 @@ img { display: block }</style>${partes.join('')}`;
     const r = await new Promise(res => w.webContents.print({
       silent: true, deviceName: t.impresora, copies: Math.max(1, Math.min(99, t.copias | 0)), collate: !!t.intercalar,
       color: !!t.color, duplexMode: ['simplex', 'longEdge', 'shortEdge'].includes(t.dobleFaz) ? t.dobleFaz : 'simplex',
-      landscape: false, pageSize: micras, margins: { marginType: 'none' }, printBackground: true
+      landscape: horizontal, pageSize: micras, margins: { marginType: 'none' }, printBackground: true
     }, (ok, error) => res({ ok, error })));
     setTimeout(() => w.destroy(), 2000);
     return r;
